@@ -1,0 +1,31 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:12.8
+    container_name: postgres
+    volumes:
+      - db:/var/lib/postgresql/data
+    ports:
+      - "${DB_HOST_PORT}:5432"
+    environment:
+      - POSTGRES_USER=${DB_USERNAME}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}   
+  
+  app:
+    container_name: weather_api
+    image: valeriia/weather_api
+    build: ./
+    ports:
+      - "${APP_PORT}:8000"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: ${DB_HOST}
+      DB_PORT: 5432
+      DB_USER: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+
+volumes:
+  db:
