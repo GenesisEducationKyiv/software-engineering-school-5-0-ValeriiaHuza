@@ -6,7 +6,7 @@ type WeatherDTO struct {
 	Description string  `json:"description"`
 }
 
-type ApiErrorResponse struct {
+type APIErrorResponse struct {
 	Error struct {
 		Code    int    `json:"code"`
 		Message string `json:"message"`
