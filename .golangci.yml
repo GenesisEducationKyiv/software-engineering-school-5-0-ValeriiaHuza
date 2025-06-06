@@ -1,6 +1,3 @@
-# .golangci.yml
-version: "2"
-
 linters:
   disable-all: true  
   enable:
