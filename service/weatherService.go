@@ -64,7 +64,12 @@ func (ws *WeatherService) fetchWeatherData(city string) ([]byte, *error.AppError
 		log.Println("HTTP request failed:", err)
 		return nil, error.ErrInvalidRequest
 	}
-	defer resp.Body.Close()
+
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Printf("failed to close response body: %v", err)
+		}
+	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -76,7 +81,7 @@ func (ws *WeatherService) fetchWeatherData(city string) ([]byte, *error.AppError
 }
 
 func (ws *WeatherService) parseAPIError(body []byte) *error.AppError {
-	var apiErr dto.ApiErrorResponse
+	var apiErr dto.APIErrorResponse
 	if err := json.Unmarshal(body, &apiErr); err != nil {
 		return nil
 	}

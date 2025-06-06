@@ -14,11 +14,9 @@ import (
 	"github.com/robfig/cron"
 )
 
-func init() {
-	config.LoadEnvVariables()
-}
-
 func main() {
+	config.LoadEnvVariables()
+
 	router := gin.Default()
 
 	// Connect to the database
@@ -53,7 +51,10 @@ func main() {
 	if port == "" {
 		port = "8000" // default fallback
 	}
-	router.Run(":" + port)
+
+	if err := router.Run(":" + port); err != nil {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }
 
 func startCronJobs() {

@@ -40,5 +40,7 @@ func ConnectToDatabase() {
 		}
 	}
 
-	DB.AutoMigrate(&models.Subscription{})
+	if err := DB.AutoMigrate(&models.Subscription{}); err != nil {
+		log.Fatalf("AutoMigrate failed: %v", err)
+	}
 }

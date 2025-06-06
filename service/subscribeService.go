@@ -40,7 +40,7 @@ func (ss *SubscribeService) SubscribeForWeather(email string, city string, frequ
 		return error.ErrInvalidInput
 	}
 
-	//check subscription in db
+	// Check subscription in db
 	if ss.emailSubscribed(email) {
 		return error.ErrEmailSubscribed
 	}
@@ -69,7 +69,7 @@ func (ss *SubscribeService) ConfirmSubscription(token string) *error.AppError {
 	}
 
 	var sub models.Subscription
-	//find token in db
+	// Find token in db
 	result := db.DB.Where("token = ?", token).First(&sub)
 
 	if result.Error != nil {
@@ -93,7 +93,7 @@ func (ss *SubscribeService) Unsubscribe(token string) *error.AppError {
 	}
 
 	var sub models.Subscription
-	//find token in db
+	// Find token in db
 	result := db.DB.Where("token = ?", token).First(&sub)
 
 	if result.Error != nil {
