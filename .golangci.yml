@@ -21,8 +21,3 @@ linters:
     - errcheck         # Ensures errors returned from functions are checked and not silently ignored.
     - errorlint        # Ensures idiomatic and consistent error handling practices (e.g., avoid string comparison of errors).
   fast: false
-
-linters-settings:
-  revive:
-    disable:
-      - exported
