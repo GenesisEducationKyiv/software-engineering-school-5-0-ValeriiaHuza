@@ -1,0 +1,23 @@
+linters:
+  disable-all: true  
+  enable:
+    - staticcheck      # Finds bugs, code smells, and redundant code.
+    - govet            # Official Go vet tool that checks for suspicious constructs (e.g., printf-style issues).
+    - unconvert        # Flags unnecessary type conversions (e.g., int(x) when x is already int).
+    - gocyclo          # Checks cyclomatic complexity to identify overly complex functions.
+    - dupl             # Detects duplicated code blocks to help reduce redundancy.
+    - misspell         # Detects commonly misspelled words in code and comments.
+    - unparam          # Flags unused function parameters to keep APIs clean.
+    - ineffassign      # Identifies assignments to variables that are never used (dead code).
+    - gochecknoinits   # Discourages use of init() functions to improve testability and clarity.
+    - gocritic         # Performs advanced checks for code correctness and best practices.
+    - nakedret         # Flags unnamed return values to improve readability and reduce bugs.
+    - prealloc         # Suggests slice preallocation where length is known, for performance.
+    - unused           # Detects unused code (variables, constants, functions, etc.).
+    - dogsled          # Flags multiple blank identifiers in short variable declarations (e.g., _, _, err := ...).
+    - gocognit         # Measures cognitive complexity of functions to identify hard-to-understand logic.
+    - testpackage      # Encourages tests in a separate package to promote black-box testing.
+    - lll              # Checks for long lines (Line Length Linter) to maintain readability across editors.
+    - errcheck         # Ensures errors returned from functions are checked and not silently ignored.
+    - errorlint        # Ensures idiomatic and consistent error handling practices (e.g., avoid string comparison of errors).
+  fast: false
