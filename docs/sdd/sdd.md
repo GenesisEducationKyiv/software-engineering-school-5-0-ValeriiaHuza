@@ -1,6 +1,12 @@
 # System Design  
 ## Weather Subscription API  
 
+### Context 
+
+The Weather Subscription API is a backend service that lets users check the current weather and receive weather updates by email. It uses data from WeatherApi.com and allows users to choose a city and how often they want updates (daily or hourly).
+
+Users subscribe by entering their email, city, and preferred frequency. They receive a confirmation email with a link to activate the subscription. The service sends weather update emails at the selected intervals and includes an unsubscribe link in each email.
+
 ### 1) System requirements  
 
 #### Functional requirements:  
@@ -17,8 +23,8 @@
 
 - System should be available 99.9% of the time.  
 - It must scale to support 100,000+ active subscriptions.  
-- Ensure low-latency API responses and minimal delay in sending emails.  
-- Achieve 99.9% reliable email delivery with retry logic.  
+- Ensure low-latency (<150ms) API responses and minimal delay in sending emails.  
+- Achieve 99.99% reliable email delivery with retry logic.  
 
 ### 2) Constraints:  
 
@@ -93,6 +99,17 @@ Mailer composes and sends emails for users.
 ### 6) Deployment  
 
 The service can be deployed easily using `docker-compose.yml`.  
+
+We choose docker because of : 
+
+- Simple deployment – Start the entire system (DB, backend, any other services) with one command anywhere
+- Lightweight and fast – Containers start quickly and use fewer resources than VMs
+
+For starting system use this command 
+
+```bash
+docker-compose up --build -d
+```
 
 ### 7) Future Enhancements  
 
