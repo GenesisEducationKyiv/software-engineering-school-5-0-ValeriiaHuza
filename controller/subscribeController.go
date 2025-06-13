@@ -8,10 +8,10 @@ import (
 )
 
 type SubscribeController struct {
-	Service *service.SubscribeService
+	Service service.SubscribeService
 }
 
-func NewSubscribeController(service *service.SubscribeService) *SubscribeController {
+func NewSubscribeController(service service.SubscribeService) *SubscribeController {
 	return &SubscribeController{Service: service}
 }
 
@@ -41,7 +41,7 @@ func (sc *SubscribeController) Unsubscribe(c *gin.Context) {
 	c.String(http.StatusOK, "You unsubscribe from weather update.")
 }
 
-func (sc *SubscribeController) SubscribeForWeather(c *gin.Context) {
+func (sc *SubscribeController) SubscribeForWeatherUpdates(c *gin.Context) {
 
 	var body struct {
 		Email     string `json:"email"`
@@ -56,7 +56,7 @@ func (sc *SubscribeController) SubscribeForWeather(c *gin.Context) {
 		return
 	}
 
-	errRes := sc.Service.SubscribeForWeather(body.Email, body.City, body.Frequency)
+	errRes := sc.Service.SubscribeForWeatherUpdates(body.Email, body.City, body.Frequency)
 
 	if errRes != nil {
 		c.String(errRes.StatusCode, errRes.Message)

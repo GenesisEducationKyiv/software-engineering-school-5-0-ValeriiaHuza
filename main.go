@@ -7,11 +7,12 @@ import (
 	"github.com/ValeriiaHuza/weather_api/config"
 	"github.com/ValeriiaHuza/weather_api/controller"
 	"github.com/ValeriiaHuza/weather_api/db"
-	"github.com/ValeriiaHuza/weather_api/models"
+	"github.com/ValeriiaHuza/weather_api/repository"
 	"github.com/ValeriiaHuza/weather_api/routes"
+	"github.com/ValeriiaHuza/weather_api/scheduler"
 	"github.com/ValeriiaHuza/weather_api/service"
+	"github.com/ValeriiaHuza/weather_api/utils"
 	"github.com/gin-gonic/gin"
-	"github.com/robfig/cron"
 )
 
 func main() {
@@ -33,18 +34,27 @@ func main() {
 	// API routes group
 	api := router.Group("/api")
 
-	// Weather service and controller
-	serviceWeather := service.NewWeatherService()
+	serviceWeather := service.NewWeatherAPIService(&utils.WeatherAPIClientImpl{})
 	controllerWeather := controller.NewWeatherController(serviceWeather)
 	routes.WeatherRoute(api, controllerWeather)
 
+	// Subscribe repository
+	subscribeRepository := repository.NewSubscriptionRepository()
+
+	//Email builder
+	emailBuilder := utils.NewWeatherEmailBuilder()
+
+	//MailerService
+	mailerService := service.NewMailerService(*emailBuilder)
+
 	// Subscription service and controller
-	serviceSubscription := service.NewSubscribeService(serviceWeather)
+	serviceSubscription := service.NewSubscribeService(serviceWeather, mailerService, subscribeRepository)
 	controllerSubscription := controller.NewSubscribeController(serviceSubscription)
 	routes.SubscribeRoute(api, controllerSubscription)
 
 	// Start background jobs
-	startCronJobs()
+	schedulerS := scheduler.NewScheduler(serviceSubscription)
+	schedulerS.StartCronJobs()
 
 	// Start the server
 	port := os.Getenv("APP_PORT")
@@ -55,23 +65,4 @@ func main() {
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
-}
-
-func startCronJobs() {
-	c := cron.New()
-
-	if err := c.AddFunc("0 0 9 * * *", func() {
-		service.SendEmails(models.FrequencyDaily)
-	}); err != nil {
-		log.Println("Failed to schedule daily job:", err)
-	}
-
-	// Every hour
-	if err := c.AddFunc("0 0 * * * *", func() {
-		service.SendEmails(models.FrequencyHourly)
-	}); err != nil {
-		log.Println("Failed to schedule hourly job:", err)
-	}
-
-	c.Start()
 }

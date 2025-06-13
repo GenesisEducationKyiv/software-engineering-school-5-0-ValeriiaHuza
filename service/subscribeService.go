@@ -1,48 +1,42 @@
 package service
 
 import (
-	"fmt"
 	"log"
 	"regexp"
-	"time"
 
-	"github.com/ValeriiaHuza/weather_api/db"
-	"github.com/ValeriiaHuza/weather_api/error"
+	appErr "github.com/ValeriiaHuza/weather_api/error"
 	"github.com/ValeriiaHuza/weather_api/models"
-	"github.com/ValeriiaHuza/weather_api/utils"
+	"github.com/ValeriiaHuza/weather_api/repository"
 	"github.com/google/uuid"
 )
 
-type SubscribeService struct {
-	Service *WeatherService
+type SubscribeService interface {
+	SubscribeForWeatherUpdates(email, city, frequency string) *appErr.AppError
+	ConfirmSubscription(token string) *appErr.AppError
+	Unsubscribe(token string) *appErr.AppError
+	GetConfirmedSubscriptionsByFrequency(freq models.Frequency) []models.Subscription
+	SendSubscriptionEmails(freq models.Frequency)
 }
 
-func NewSubscribeService(service *WeatherService) *SubscribeService {
-	return &SubscribeService{Service: service}
+type SubscribeServiceImpl struct {
+	WeatherService      WeatherService
+	MailerService       MailerService
+	SubscribeRepository repository.SubscriptionRepository
 }
 
-func (ss *SubscribeService) SubscribeForWeather(email string, city string, frequencyStr string) *error.AppError {
-
-	if email == "" || city == "" || frequencyStr == "" {
-		return error.ErrInvalidInput
+func NewSubscribeService(weatherService WeatherService, mailerService MailerService, repository repository.SubscriptionRepository) *SubscribeServiceImpl {
+	return &SubscribeServiceImpl{
+		WeatherService:      weatherService,
+		MailerService:       mailerService,
+		SubscribeRepository: repository,
 	}
+}
 
-	if !ss.isValidEmail(email) {
-		return error.ErrInvalidInput
-	}
+func (ss *SubscribeServiceImpl) SubscribeForWeatherUpdates(email string, city string, frequencyStr string) *appErr.AppError {
 
-	if _, err := ss.Service.GetWeather(city); err != nil {
-		return error.ErrInvalidInput
-	}
-
-	frequency, err := models.ParseFrequency(frequencyStr)
+	frequency, err := ss.validateSubscriptionInput(email, city, frequencyStr)
 	if err != nil {
-		return error.ErrInvalidInput
-	}
-
-	// Check subscription in db
-	if ss.emailSubscribed(email) {
-		return error.ErrEmailSubscribed
+		return err
 	}
 
 	token := ss.generateToken()
@@ -54,118 +48,124 @@ func (ss *SubscribeService) SubscribeForWeather(email string, city string, frequ
 		Confirmed: false,
 	}
 
-	if err := db.DB.Create(&newSubscription).Error; err != nil {
-		return error.ErrInvalidInput
+	if err := ss.SubscribeRepository.Create(newSubscription); err != nil {
+		log.Println("Db error : ", err.Error())
+		return appErr.ErrInvalidInput
 	}
 
-	utils.SendConfirmationEmail(newSubscription)
+	ss.MailerService.SendConfirmationEmail(newSubscription)
 
 	return nil
 }
 
-func (ss *SubscribeService) ConfirmSubscription(token string) *error.AppError {
-	if token == "" {
-		return error.ErrInvalidToken
+func (ss *SubscribeServiceImpl) validateSubscriptionInput(email string, city string, frequencyStr string) (models.Frequency, *appErr.AppError) {
+	if email == "" || city == "" || frequencyStr == "" {
+		return "", appErr.ErrInvalidInput
 	}
 
-	var sub models.Subscription
-	// Find token in db
-	result := db.DB.Where("token = ?", token).First(&sub)
+	if !ss.isValidEmail(email) {
+		return "", appErr.ErrInvalidInput
+	}
 
-	if result.Error != nil {
-		return error.ErrTokenNotFound
+	if _, err := ss.WeatherService.GetWeather(city); err != nil {
+		return "", appErr.ErrInvalidInput
+	}
+
+	frequency, err := models.ParseFrequency(frequencyStr)
+	if err != nil {
+		return "", appErr.ErrInvalidInput
+	}
+
+	subscribed, err := ss.emailSubscribed(email)
+	if subscribed {
+		return "", appErr.ErrEmailSubscribed
+	}
+	if err != nil {
+		return "", appErr.ErrInvalidInput
+	}
+
+	return frequency, nil
+}
+
+func (ss *SubscribeServiceImpl) ConfirmSubscription(token string) *appErr.AppError {
+	if token == "" {
+		return appErr.ErrInvalidToken
+	}
+
+	sub, err := ss.SubscribeRepository.FindByToken(token)
+
+	if err != nil {
+		return appErr.ErrTokenNotFound
 	}
 
 	sub.Confirmed = true
 
-	if err := db.DB.Save(&sub).Error; err != nil {
-		return error.ErrInvalidToken
+	if err := ss.SubscribeRepository.Update(*sub); err != nil {
+		return appErr.ErrInvalidToken
 	}
 
-	utils.SendConfirmSuccessMail(sub)
+	ss.MailerService.SendConfirmSuccessEmail(*sub)
 
 	return nil
 }
 
-func (ss *SubscribeService) Unsubscribe(token string) *error.AppError {
+func (ss *SubscribeServiceImpl) Unsubscribe(token string) *appErr.AppError {
 	if token == "" {
-		return error.ErrInvalidToken
+		return appErr.ErrInvalidToken
 	}
 
-	var sub models.Subscription
-	// Find token in db
-	result := db.DB.Where("token = ?", token).First(&sub)
+	sub, err := ss.SubscribeRepository.FindByToken(token)
 
-	if result.Error != nil {
-		return error.ErrTokenNotFound
+	if err != nil {
+		return appErr.ErrTokenNotFound
 	}
 
-	if err := db.DB.Unscoped().Delete(&sub).Error; err != nil {
-		return error.ErrInvalidToken
+	if err := ss.SubscribeRepository.Delete(*sub); err != nil {
+		return appErr.ErrInvalidToken
 	}
 
 	return nil
 }
 
-func (*SubscribeService) emailSubscribed(email string) bool {
-	var sub models.Subscription
+func (ss *SubscribeServiceImpl) emailSubscribed(email string) (bool, error) {
 
-	result := db.DB.Where("email = ?", email).First(&sub)
+	sub, err := ss.SubscribeRepository.FindByEmail(email)
 
-	return result.Error == nil
+	return sub != nil, err
 }
 
-func (*SubscribeService) isValidEmail(email string) bool {
+func (ss *SubscribeServiceImpl) isValidEmail(email string) bool {
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	return re.MatchString(email)
 }
 
-func (*SubscribeService) generateToken() string {
+func (ss *SubscribeServiceImpl) generateToken() string {
 	return uuid.New().String()
 }
 
-func SendEmails(freq models.Frequency) {
-	subs := GetSubscriptionsByFrequency(freq)
-	serviceW := NewWeatherService()
+func (ss *SubscribeServiceImpl) SendSubscriptionEmails(freq models.Frequency) {
+	subs := ss.GetConfirmedSubscriptionsByFrequency(freq)
 
 	log.Printf("Found %d %s subscriptions.", len(subs), string(freq))
 
 	for _, sub := range subs {
-		weather, err := serviceW.GetWeather(sub.City)
+		weather, err := ss.WeatherService.GetWeather(sub.City)
 		if err != nil {
 			log.Println("Weather error for", sub.City, ":", err)
 			continue
 		}
 
-		unsubscribeLink := utils.BuildURL("/api/unsubscribe/") + sub.Token
-
-		now := time.Now()
-		message := fmt.Sprintf(`
-		<p><strong>Weather update for %s</strong></p>
-		<p><strong>Date:</strong> %s<br>
-		<strong>Time:</strong> %s</p>
-		<p><strong>Temperature:</strong> %.1f°C<br>
-		<strong>Humidity:</strong> %.0f%%<br>
-		<strong>Description:</strong> %s</p>
-		<p><a href="%s">Unsubscribe here</a></p>`,
-			sub.City,
-			now.Format("January 2, 2006"),
-			now.Format("15:04"),
-			weather.Temperature,
-			weather.Humidity,
-			weather.Description,
-			unsubscribeLink,
-		)
-
-		utils.SendEmail(sub.Email, "Weather Update", message)
+		ss.MailerService.SendWeatherUpdateEmail(sub, *weather)
 	}
 }
 
-func GetSubscriptionsByFrequency(freq models.Frequency) []models.Subscription {
-	var subs []models.Subscription
-	result := db.DB.Where("frequency = ? AND confirmed = true", freq).Find(&subs)
-	if result.Error != nil {
-		log.Println("DB error:", result.Error)
+func (ss *SubscribeServiceImpl) GetConfirmedSubscriptionsByFrequency(freq models.Frequency) []models.Subscription {
+	subs, err := ss.SubscribeRepository.FindByFrequencyAndConfirmation(freq)
+
+	if err != nil {
+		log.Println("Error fetching confirmed subscriptions:", err)
+		return []models.Subscription{}
 	}
+
 	return subs
 }

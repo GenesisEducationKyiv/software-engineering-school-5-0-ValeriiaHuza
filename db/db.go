@@ -23,6 +23,16 @@ func ConnectToDatabase() {
 
 	dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v sslmode=disable", host, user, password, dbName, port)
 
+	if err := ConnectToDBWithRetry(dsn); err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+
+	if err := DB.AutoMigrate(&models.Subscription{}); err != nil {
+		log.Fatalf("AutoMigrate failed: %v", err)
+	}
+}
+
+func ConnectToDBWithRetry(dsn string) error {
 	const maxRetries = 10
 	for i := 1; i <= maxRetries; i++ {
 		fmt.Printf("Connecting to DB (attempt %d/%d)...\n", i, maxRetries)
@@ -30,17 +40,14 @@ func ConnectToDatabase() {
 		DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err == nil {
 			fmt.Println("Connected to database")
-			break
+			return nil
 		}
 		fmt.Printf("Database not ready: %v\n", err)
 		time.Sleep(3 * time.Second)
 
 		if i == maxRetries {
-			log.Fatalf("Failed to connect to database after %d attempts: %v", maxRetries, err)
+			return fmt.Errorf("failed to connect to database after %d attempts: %w", maxRetries, err)
 		}
 	}
-
-	if err := DB.AutoMigrate(&models.Subscription{}); err != nil {
-		log.Fatalf("AutoMigrate failed: %v", err)
-	}
+	return fmt.Errorf("failed to connect to database")
 }
