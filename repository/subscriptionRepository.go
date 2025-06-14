@@ -1,8 +1,8 @@
 package repository
 
 import (
-	"github.com/ValeriiaHuza/weather_api/db"
 	"github.com/ValeriiaHuza/weather_api/models"
+	"gorm.io/gorm"
 )
 
 type SubscriptionRepository interface {
@@ -14,23 +14,25 @@ type SubscriptionRepository interface {
 	FindByFrequencyAndConfirmation(freq models.Frequency) ([]models.Subscription, error)
 }
 
-type subscriptionRepository struct{}
+type subscriptionRepository struct {
+	db *gorm.DB
+}
 
-func NewSubscriptionRepository() SubscriptionRepository {
-	return &subscriptionRepository{}
+func NewSubscriptionRepository(database *gorm.DB) SubscriptionRepository {
+	return &subscriptionRepository{db: database}
 }
 
 func (r *subscriptionRepository) Create(sub models.Subscription) error {
-	return db.DB.Create(&sub).Error
+	return r.db.Create(&sub).Error
 }
 
 func (r *subscriptionRepository) Update(sub models.Subscription) error {
-	return db.DB.Save(&sub).Error
+	return r.db.Save(&sub).Error
 }
 
 func (r *subscriptionRepository) FindByToken(token string) (*models.Subscription, error) {
 	var sub models.Subscription
-	err := db.DB.Where("token = ?", token).First(&sub).Error
+	err := r.db.Where("token = ?", token).First(&sub).Error
 	if err != nil {
 		return nil, err
 	}
@@ -38,12 +40,12 @@ func (r *subscriptionRepository) FindByToken(token string) (*models.Subscription
 }
 
 func (r *subscriptionRepository) Delete(sub models.Subscription) error {
-	return db.DB.Unscoped().Delete(&sub).Error
+	return r.db.Unscoped().Delete(&sub).Error
 }
 
 func (r *subscriptionRepository) FindByEmail(email string) (*models.Subscription, error) {
 	var sub models.Subscription
-	err := db.DB.Where("email = ?", email).First(&sub).Error
+	err := r.db.Where("email = ?", email).First(&sub).Error
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +54,7 @@ func (r *subscriptionRepository) FindByEmail(email string) (*models.Subscription
 
 func (r *subscriptionRepository) FindByFrequencyAndConfirmation(freq models.Frequency) ([]models.Subscription, error) {
 	var subs []models.Subscription
-	err := db.DB.Where("frequency = ? AND confirmed = true", freq).Find(&subs).Error
+	err := r.db.Where("frequency = ? AND confirmed = true", freq).Find(&subs).Error
 	if err != nil {
 		return nil, err
 	}

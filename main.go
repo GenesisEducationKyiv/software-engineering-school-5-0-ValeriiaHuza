@@ -39,12 +39,12 @@ func main() {
 	routes.WeatherRoute(api, controllerWeather)
 
 	// Subscribe repository
-	subscribeRepository := repository.NewSubscriptionRepository()
+	subscribeRepository := repository.NewSubscriptionRepository(db.DB)
 
-	//Email builder
+	// Email builder
 	emailBuilder := utils.NewWeatherEmailBuilder()
 
-	//MailerService
+	// MailerService
 	mailerService := service.NewMailerService(*emailBuilder)
 
 	// Subscription service and controller

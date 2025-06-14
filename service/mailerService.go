@@ -41,7 +41,7 @@ func (ms *MailerServiceImpl) SendWeatherUpdateEmail(sub models.Subscription, wea
 
 func (ms *MailerServiceImpl) send(to, subject, body string) {
 	if os.Getenv("MAIL_EMAIL") == "" || os.Getenv("MAIL_PASSWORD") == "" {
-		log.Fatalln("MAIL_EMAIL and MAIL_PASSWORD environment variables are required")
+		log.Println("MAIL_EMAIL and MAIL_PASSWORD environment variables are required")
 		return
 	}
 

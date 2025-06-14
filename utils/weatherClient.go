@@ -11,22 +11,22 @@ import (
 	"time"
 
 	"github.com/ValeriiaHuza/weather_api/dto"
-	"github.com/ValeriiaHuza/weather_api/error"
+	appErr "github.com/ValeriiaHuza/weather_api/error"
 )
 
 type WeatherAPIClient interface {
-	FetchWeather(city string) ([]byte, *error.AppError)
+	FetchWeather(city string) ([]byte, *appErr.AppError)
 }
 
 type WeatherAPIClientImpl struct {
 }
 
-func (c *WeatherAPIClientImpl) FetchWeather(city string) ([]byte, *error.AppError) {
+func (c *WeatherAPIClientImpl) FetchWeather(city string) ([]byte, *appErr.AppError) {
 	apiKey := os.Getenv("WEATHER_API_KEY")
 
 	if apiKey == "" {
 		log.Println("Missing WEATHER_API_KEY")
-		return nil, error.ErrInvalidRequest
+		return nil, appErr.ErrInvalidRequest
 	}
 
 	city = url.QueryEscape(city)
@@ -37,7 +37,7 @@ func (c *WeatherAPIClientImpl) FetchWeather(city string) ([]byte, *error.AppErro
 	resp, err := client.Get(weatherUrl)
 	if err != nil {
 		log.Println("HTTP request failed:", err)
-		return nil, error.ErrInvalidRequest
+		return nil, appErr.ErrInvalidRequest
 	}
 
 	defer func() {
@@ -49,7 +49,7 @@ func (c *WeatherAPIClientImpl) FetchWeather(city string) ([]byte, *error.AppErro
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Println("Failed to read response body:", err)
-		return nil, error.ErrInvalidRequest
+		return nil, appErr.ErrInvalidRequest
 	}
 
 	if apiErr := c.ParseAPIError(body); apiErr != nil {
@@ -59,7 +59,7 @@ func (c *WeatherAPIClientImpl) FetchWeather(city string) ([]byte, *error.AppErro
 	return body, nil
 }
 
-func (ws *WeatherAPIClientImpl) ParseAPIError(body []byte) *error.AppError {
+func (ws *WeatherAPIClientImpl) ParseAPIError(body []byte) *appErr.AppError {
 	var apiErr dto.APIErrorResponse
 	if err := json.Unmarshal(body, &apiErr); err != nil {
 		return nil
@@ -68,9 +68,9 @@ func (ws *WeatherAPIClientImpl) ParseAPIError(body []byte) *error.AppError {
 	if apiErr.Error.Message != "" {
 		log.Printf("API Error %d: %s\n", apiErr.Error.Code, apiErr.Error.Message)
 		if apiErr.Error.Code == 1006 {
-			return error.ErrCityNotFound
+			return appErr.ErrCityNotFound
 		}
-		return error.ErrInvalidRequest
+		return appErr.ErrInvalidRequest
 	}
 	return nil
 }

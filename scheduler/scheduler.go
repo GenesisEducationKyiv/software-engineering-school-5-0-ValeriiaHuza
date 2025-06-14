@@ -21,7 +21,7 @@ func NewScheduler(subscribeService service.SubscribeService) *Scheduler {
 func (ss *Scheduler) StartCronJobs() {
 	c := cron.New()
 
-	//at 9 oclock
+	// at 9 oclock
 	if err := c.AddFunc("0 9 * * *", func() {
 		ss.SubscribeService.SendSubscriptionEmails(models.FrequencyDaily)
 	}); err != nil {

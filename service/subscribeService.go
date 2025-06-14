@@ -24,7 +24,9 @@ type SubscribeServiceImpl struct {
 	SubscribeRepository repository.SubscriptionRepository
 }
 
-func NewSubscribeService(weatherService WeatherService, mailerService MailerService, repository repository.SubscriptionRepository) *SubscribeServiceImpl {
+func NewSubscribeService(weatherService WeatherService,
+	mailerService MailerService,
+	repository repository.SubscriptionRepository) *SubscribeServiceImpl {
 	return &SubscribeServiceImpl{
 		WeatherService:      weatherService,
 		MailerService:       mailerService,
@@ -32,7 +34,8 @@ func NewSubscribeService(weatherService WeatherService, mailerService MailerServ
 	}
 }
 
-func (ss *SubscribeServiceImpl) SubscribeForWeatherUpdates(email string, city string, frequencyStr string) *appErr.AppError {
+func (ss *SubscribeServiceImpl) SubscribeForWeatherUpdates(email string,
+	city string, frequencyStr string) *appErr.AppError {
 
 	frequency, err := ss.validateSubscriptionInput(email, city, frequencyStr)
 	if err != nil {
@@ -50,7 +53,7 @@ func (ss *SubscribeServiceImpl) SubscribeForWeatherUpdates(email string, city st
 
 	if err := ss.SubscribeRepository.Create(newSubscription); err != nil {
 		log.Println("Db error : ", err.Error())
-		return appErr.ErrInvalidInput
+		return appErr.ErrFailedToSaveSubscription
 	}
 
 	ss.MailerService.SendConfirmationEmail(newSubscription)
@@ -58,7 +61,8 @@ func (ss *SubscribeServiceImpl) SubscribeForWeatherUpdates(email string, city st
 	return nil
 }
 
-func (ss *SubscribeServiceImpl) validateSubscriptionInput(email string, city string, frequencyStr string) (models.Frequency, *appErr.AppError) {
+func (ss *SubscribeServiceImpl) validateSubscriptionInput(email string,
+	city string, frequencyStr string) (models.Frequency, *appErr.AppError) {
 	if email == "" || city == "" || frequencyStr == "" {
 		return "", appErr.ErrInvalidInput
 	}
@@ -68,7 +72,7 @@ func (ss *SubscribeServiceImpl) validateSubscriptionInput(email string, city str
 	}
 
 	if _, err := ss.WeatherService.GetWeather(city); err != nil {
-		return "", appErr.ErrInvalidInput
+		return "", err
 	}
 
 	frequency, err := models.ParseFrequency(frequencyStr)
@@ -101,7 +105,8 @@ func (ss *SubscribeServiceImpl) ConfirmSubscription(token string) *appErr.AppErr
 	sub.Confirmed = true
 
 	if err := ss.SubscribeRepository.Update(*sub); err != nil {
-		return appErr.ErrInvalidToken
+		log.Println("Failed to update subscription:", err)
+		return appErr.ErrFailedToSaveSubscription
 	}
 
 	ss.MailerService.SendConfirmSuccessEmail(*sub)
@@ -121,7 +126,8 @@ func (ss *SubscribeServiceImpl) Unsubscribe(token string) *appErr.AppError {
 	}
 
 	if err := ss.SubscribeRepository.Delete(*sub); err != nil {
-		return appErr.ErrInvalidToken
+		log.Println("Failed to delete subscription:", err)
+		return appErr.ErrInvalidInput
 	}
 
 	return nil
@@ -145,7 +151,7 @@ func (ss *SubscribeServiceImpl) generateToken() string {
 
 func (ss *SubscribeServiceImpl) SendSubscriptionEmails(freq models.Frequency) {
 	subs := ss.GetConfirmedSubscriptionsByFrequency(freq)
-
+	log.Printf("Number of subscriptions found for frequency %s: %d", string(freq), len(subs))
 	log.Printf("Found %d %s subscriptions.", len(subs), string(freq))
 
 	for _, sub := range subs {
