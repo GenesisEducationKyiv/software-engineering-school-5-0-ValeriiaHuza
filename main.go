@@ -13,56 +13,79 @@ import (
 	"github.com/ValeriiaHuza/weather_api/service"
 	"github.com/ValeriiaHuza/weather_api/utils"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 func main() {
 	config.LoadEnvVariables()
 
+	db := initDatabase()
+	router := setupRouter()
+
+	services := initServices(db)
+	initRoutes(router, services)
+	startBackgroundJobs(services.SubscribeService)
+
+	startServer(router)
+}
+
+func initDatabase() *gorm.DB {
+	db.ConnectToDatabase()
+	return db.DB
+}
+
+func setupRouter() *gin.Engine {
 	router := gin.Default()
 
-	// Connect to the database
-	db.ConnectToDatabase()
-
-	// Serve static files (e.g., subscribe.html)
 	router.Static("/static", "./static")
-
-	// Route for the HTML page
 	router.GET("/", func(c *gin.Context) {
 		c.File("./static/index.html")
 	})
 
-	// API routes group
+	return router
+}
+
+func initRoutes(router *gin.Engine, services *Services) {
 	api := router.Group("/api")
 
-	serviceWeather := service.NewWeatherAPIService(&utils.WeatherAPIClientImpl{})
-	controllerWeather := controller.NewWeatherController(serviceWeather)
-	routes.WeatherRoute(api, controllerWeather)
+	weatherController := controller.NewWeatherController(services.WeatherService)
+	routes.WeatherRoute(api, weatherController)
 
-	// Subscribe repository
-	subscribeRepository := repository.NewSubscriptionRepository(db.DB)
+	subscribeController := controller.NewSubscribeController(services.SubscribeService)
+	routes.SubscribeRoute(api, subscribeController)
+}
 
-	// Email builder
-	emailBuilder := utils.NewWeatherEmailBuilder()
+func startBackgroundJobs(subscribeService service.SubscribeService) {
+	schedulerService := scheduler.NewScheduler(subscribeService)
+	schedulerService.StartCronJobs()
+}
 
-	// MailerService
-	mailerService := service.NewMailerService(*emailBuilder)
-
-	// Subscription service and controller
-	serviceSubscription := service.NewSubscribeService(serviceWeather, mailerService, subscribeRepository)
-	controllerSubscription := controller.NewSubscribeController(serviceSubscription)
-	routes.SubscribeRoute(api, controllerSubscription)
-
-	// Start background jobs
-	schedulerS := scheduler.NewScheduler(serviceSubscription)
-	schedulerS.StartCronJobs()
-
-	// Start the server
+func startServer(router *gin.Engine) {
 	port := os.Getenv("APP_PORT")
 	if port == "" {
-		port = "8000" // default fallback
+		port = "8000"
 	}
-
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+func initServices(database *gorm.DB) *Services {
+	weatherClient := &utils.WeatherAPIClientImpl{}
+	weatherService := service.NewWeatherAPIService(weatherClient)
+
+	subscribeRepo := repository.NewSubscriptionRepository(database)
+	emailBuilder := utils.NewWeatherEmailBuilder()
+	mailerService := service.NewMailerService(*emailBuilder)
+	subscribeService := service.NewSubscribeService(weatherService, mailerService, subscribeRepo)
+
+	return &Services{
+		WeatherService:   weatherService,
+		SubscribeService: subscribeService,
+	}
+}
+
+type Services struct {
+	WeatherService   service.WeatherService
+	SubscribeService service.SubscribeService
 }
