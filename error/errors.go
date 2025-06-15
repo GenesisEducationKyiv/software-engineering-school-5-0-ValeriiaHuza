@@ -27,4 +27,6 @@ var (
 
 	ErrInvalidToken  = New(http.StatusBadRequest, "Invalid token")
 	ErrTokenNotFound = New(http.StatusNotFound, "Token not found")
+
+	ErrFailedToSaveSubscription = New(http.StatusBadRequest, "Failed to save subscription")
 )

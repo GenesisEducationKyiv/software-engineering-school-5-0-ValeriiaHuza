@@ -13,7 +13,7 @@ func WeatherRoute(router *gin.RouterGroup, weatherController *controller.Weather
 
 func SubscribeRoute(router *gin.RouterGroup, subscribeController *controller.SubscribeController) {
 
-	router.POST("/subscribe", subscribeController.SubscribeForWeather)
+	router.POST("/subscribe", subscribeController.SubscribeForWeatherUpdates)
 	router.GET("/confirm/:token", subscribeController.ConfirmSubscription)
 	router.GET("/unsubscribe/:token", subscribeController.Unsubscribe)
 

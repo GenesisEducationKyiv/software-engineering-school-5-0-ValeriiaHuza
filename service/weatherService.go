@@ -2,35 +2,36 @@ package service
 
 import (
 	"encoding/json"
-	"fmt"
-	"io"
 	"log"
-	"net/http"
-	"os"
 
 	"github.com/ValeriiaHuza/weather_api/dto"
 	"github.com/ValeriiaHuza/weather_api/error"
+	"github.com/ValeriiaHuza/weather_api/utils"
 )
 
-type WeatherService struct {
+type WeatherService interface {
+	GetWeather(city string) (*dto.WeatherDTO, *error.AppError)
 }
 
-func NewWeatherService() *WeatherService {
-	return &WeatherService{}
+type WeatherAPIService struct {
+	WeatherClient utils.WeatherAPIClient
 }
 
-func (ws *WeatherService) GetWeather(city string) (*dto.WeatherDTO, *error.AppError) {
+func NewWeatherAPIService(weatherClient utils.WeatherAPIClient) *WeatherAPIService {
+	return &WeatherAPIService{
+		WeatherClient: weatherClient,
+	}
+}
+
+func (ws *WeatherAPIService) GetWeather(city string) (*dto.WeatherDTO, *error.AppError) {
 	if city == "" {
 		return nil, error.ErrInvalidRequest
 	}
 
-	body, err := ws.fetchWeatherData(city)
+	body, err := ws.WeatherClient.FetchWeather(city)
 	if err != nil {
+		log.Println("HTTP error:", err)
 		return nil, err
-	}
-
-	if apiErr := ws.parseAPIError(body); apiErr != nil {
-		return nil, apiErr
 	}
 
 	var weather dto.WeatherResponse
@@ -47,51 +48,4 @@ func (ws *WeatherService) GetWeather(city string) (*dto.WeatherDTO, *error.AppEr
 	}
 
 	return &weatherDTO, nil
-}
-
-func (ws *WeatherService) fetchWeatherData(city string) ([]byte, *error.AppError) {
-	apiKey := os.Getenv("WEATHER_API_KEY")
-
-	if apiKey == "" {
-		log.Println("Missing WEATHER_API_KEY")
-		return nil, error.ErrInvalidRequest
-	}
-
-	url := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%v&q=%v", apiKey, city)
-
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Println("HTTP request failed:", err)
-		return nil, error.ErrInvalidRequest
-	}
-
-	defer func() {
-		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
-		}
-	}()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Println("Failed to read response body:", err)
-		return nil, error.ErrInvalidRequest
-	}
-
-	return body, nil
-}
-
-func (ws *WeatherService) parseAPIError(body []byte) *error.AppError {
-	var apiErr dto.APIErrorResponse
-	if err := json.Unmarshal(body, &apiErr); err != nil {
-		return nil
-	}
-
-	if apiErr.Error.Message != "" {
-		log.Printf("API Error %d: %s\n", apiErr.Error.Code, apiErr.Error.Message)
-		if apiErr.Error.Code == 1006 {
-			return error.ErrCityNotFound
-		}
-		return error.ErrInvalidRequest
-	}
-	return nil
 }
