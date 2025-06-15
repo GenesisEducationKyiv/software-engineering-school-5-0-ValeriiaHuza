@@ -37,7 +37,7 @@ func NewSubscribeService(weatherService WeatherService,
 func (ss *SubscribeServiceImpl) SubscribeForWeatherUpdates(email string,
 	city string, frequencyStr string) *appErr.AppError {
 
-	frequency, err := ss.validateSubscriptionInput(email, city, frequencyStr)
+	frequency, err := ss.ValidateSubscriptionInput(email, city, frequencyStr)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (ss *SubscribeServiceImpl) SubscribeForWeatherUpdates(email string,
 	return nil
 }
 
-func (ss *SubscribeServiceImpl) validateSubscriptionInput(email string,
+func (ss *SubscribeServiceImpl) ValidateSubscriptionInput(email string,
 	city string, frequencyStr string) (models.Frequency, *appErr.AppError) {
 	if email == "" || city == "" || frequencyStr == "" {
 		return "", appErr.ErrInvalidInput
@@ -81,11 +81,11 @@ func (ss *SubscribeServiceImpl) validateSubscriptionInput(email string,
 	}
 
 	subscribed, err := ss.emailSubscribed(email)
-	if subscribed {
-		return "", appErr.ErrEmailSubscribed
-	}
 	if err != nil {
 		return "", appErr.ErrInvalidInput
+	}
+	if subscribed {
+		return "", appErr.ErrEmailSubscribed
 	}
 
 	return frequency, nil
