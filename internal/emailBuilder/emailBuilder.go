@@ -16,7 +16,10 @@ func NewWeatherEmailBuilder() *WeatherEmailBuilder {
 	return &WeatherEmailBuilder{}
 }
 
-func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(sub subscription.Subscription, weather weather.WeatherDTO) string {
+func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(
+	sub subscription.Subscription,
+	weather weather.WeatherDTO) string {
+
 	unsubscribeLink := w.BuildURL("/api/unsubscribe/") + sub.Token
 	now := time.Now()
 

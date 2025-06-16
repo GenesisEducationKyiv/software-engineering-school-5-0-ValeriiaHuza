@@ -43,7 +43,8 @@ func (r *SubscriptionRepository) FindByEmail(email string) (*subscription.Subscr
 	return &sub, nil
 }
 
-func (r *SubscriptionRepository) FindByFrequencyAndConfirmation(freq subscription.Frequency) ([]subscription.Subscription, error) {
+func (r *SubscriptionRepository) FindByFrequencyAndConfirmation(
+	freq subscription.Frequency) ([]subscription.Subscription, error) {
 	var subs []subscription.Subscription
 	err := r.db.Where("frequency = ? AND confirmed = true", freq).Find(&subs).Error
 	if err != nil {
