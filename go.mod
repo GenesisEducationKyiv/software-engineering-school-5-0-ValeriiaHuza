@@ -6,8 +6,12 @@ require gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/deckarep/golang-set/v2 v2.7.0 // indirect
 	github.com/go-co-op/gocron v1.37.0 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.4 // indirect
+	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
+	github.com/playwright-community/playwright-go v0.5200.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
