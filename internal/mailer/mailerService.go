@@ -2,8 +2,8 @@ package mailer
 
 import (
 	"log"
-	"os"
 
+	"github.com/ValeriiaHuza/weather_api/config"
 	"github.com/ValeriiaHuza/weather_api/internal/emailBuilder"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
 	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
@@ -34,13 +34,8 @@ func (ms *MailService) SendWeatherUpdateEmail(sub subscription.Subscription, wea
 }
 
 func (ms *MailService) send(to, subject, body string) {
-	if os.Getenv("MAIL_EMAIL") == "" || os.Getenv("MAIL_PASSWORD") == "" {
-		log.Println("MAIL_EMAIL and MAIL_PASSWORD environment variables are required")
-		return
-	}
-
-	from := os.Getenv("MAIL_EMAIL")
-	password := os.Getenv("MAIL_PASSWORD")
+	from := config.AppConfig.MailEmail
+	password := config.AppConfig.MailPassword
 
 	m := gomail.NewMessage()
 	m.SetHeader("From", from)

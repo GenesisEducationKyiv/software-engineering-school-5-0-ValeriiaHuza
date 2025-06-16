@@ -3,9 +3,9 @@ package emailBuilder
 import (
 	"fmt"
 	"html"
-	"os"
 	"time"
 
+	"github.com/ValeriiaHuza/weather_api/config"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
 	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
 )
@@ -65,6 +65,6 @@ func (w *WeatherEmailBuilder) BuildConfirmSuccessEmail(sub subscription.Subscrip
 }
 
 func (w *WeatherEmailBuilder) BuildURL(path string) string {
-	host := os.Getenv("APP_URL")
+	host := config.AppConfig.AppURL
 	return host + path
 }

@@ -3,19 +3,19 @@ package db
 import (
 	"fmt"
 	"log"
-	"os"
 
+	"github.com/ValeriiaHuza/weather_api/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func ConnectToDatabase() *gorm.DB {
 
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USERNAME")
-	password := os.Getenv("DB_PASSWORD")
-	dbName := os.Getenv("DB_NAME")
+	host := config.AppConfig.DBHost
+	port := config.AppConfig.DBPort
+	user := config.AppConfig.DBUsername
+	password := config.AppConfig.DBPassword
+	dbName := config.AppConfig.DBName
 
 	dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v sslmode=disable", host, user, password, dbName, port)
 

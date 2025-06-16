@@ -7,9 +7,9 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
+	"github.com/ValeriiaHuza/weather_api/config"
 	appErr "github.com/ValeriiaHuza/weather_api/error"
 )
 
@@ -17,7 +17,7 @@ type WeatherAPIClient struct {
 }
 
 func (c *WeatherAPIClient) FetchWeather(city string) ([]byte, *appErr.AppError) {
-	apiKey := os.Getenv("WEATHER_API_KEY")
+	apiKey := config.AppConfig.WeatherAPIKey
 
 	if apiKey == "" {
 		log.Println("Missing WEATHER_API_KEY")

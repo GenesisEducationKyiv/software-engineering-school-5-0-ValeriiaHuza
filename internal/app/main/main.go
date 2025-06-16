@@ -2,7 +2,7 @@ package main
 
 import (
 	"log"
-	"os"
+	"strconv"
 
 	"github.com/ValeriiaHuza/weather_api/config"
 	"github.com/ValeriiaHuza/weather_api/internal/client"
@@ -63,10 +63,8 @@ func startBackgroundJobs(subscribeService subscription.SubscribeService) {
 }
 
 func startServer(router *gin.Engine) {
-	port := os.Getenv("APP_PORT")
-	if port == "" {
-		port = "8000"
-	}
+	port := strconv.Itoa(config.AppConfig.AppPort)
+
 	if err := router.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
