@@ -11,7 +11,7 @@ RUN go mod download
 COPY . .
 
 # Build the app
-RUN go build -o weather-api
+RUN go build -o weather-api ./internal/app/main
 
 # Run the app
 CMD ["./weather-api"]

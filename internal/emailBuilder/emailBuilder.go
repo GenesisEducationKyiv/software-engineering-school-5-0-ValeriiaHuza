@@ -1,12 +1,13 @@
-package utils
+package emailBuilder
 
 import (
 	"fmt"
+	"html"
 	"os"
 	"time"
 
-	"github.com/ValeriiaHuza/weather_api/dto"
-	"github.com/ValeriiaHuza/weather_api/models"
+	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
+	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
 )
 
 type WeatherEmailBuilder struct{}
@@ -15,9 +16,13 @@ func NewWeatherEmailBuilder() *WeatherEmailBuilder {
 	return &WeatherEmailBuilder{}
 }
 
-func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(sub models.Subscription, weather dto.WeatherDTO) string {
+func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(sub subscription.Subscription, weather weather.WeatherDTO) string {
 	unsubscribeLink := w.BuildURL("/api/unsubscribe/") + sub.Token
 	now := time.Now()
+
+	sub.City = html.EscapeString(sub.City)
+	weather.Description = html.EscapeString(weather.Description)
+
 	return fmt.Sprintf(`
 		<p><strong>Weather update for %s</strong></p>
 		<p><strong>Date:</strong> %s<br>
@@ -36,7 +41,7 @@ func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(sub models.Subscription, w
 	)
 }
 
-func (w *WeatherEmailBuilder) BuildConfirmationEmail(sub models.Subscription) string {
+func (w *WeatherEmailBuilder) BuildConfirmationEmail(sub subscription.Subscription) string {
 	confirmationLink := w.BuildURL("/api/confirm/") + sub.Token
 	return fmt.Sprintf(`
 		<p>Hello from Weather Updates!</p>
@@ -46,7 +51,7 @@ func (w *WeatherEmailBuilder) BuildConfirmationEmail(sub models.Subscription) st
 		string(sub.Frequency), sub.City, confirmationLink)
 }
 
-func (w *WeatherEmailBuilder) BuildConfirmSuccessEmail(sub models.Subscription) string {
+func (w *WeatherEmailBuilder) BuildConfirmSuccessEmail(sub subscription.Subscription) string {
 	unsubscribeLink := w.BuildURL("/api/unsubscribe/") + sub.Token
 	return fmt.Sprintf(`
 		<p>Hello from Weather Updates!</p>

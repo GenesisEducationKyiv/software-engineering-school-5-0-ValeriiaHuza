@@ -1,4 +1,4 @@
-package utils
+package client
 
 import (
 	"encoding/json"
@@ -10,18 +10,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/ValeriiaHuza/weather_api/dto"
 	appErr "github.com/ValeriiaHuza/weather_api/error"
 )
 
-type WeatherAPIClient interface {
-	FetchWeather(city string) ([]byte, *appErr.AppError)
+type WeatherAPIClient struct {
 }
 
-type WeatherAPIClientImpl struct {
-}
-
-func (c *WeatherAPIClientImpl) FetchWeather(city string) ([]byte, *appErr.AppError) {
+func (c *WeatherAPIClient) FetchWeather(city string) ([]byte, *appErr.AppError) {
 	apiKey := os.Getenv("WEATHER_API_KEY")
 
 	if apiKey == "" {
@@ -31,7 +26,7 @@ func (c *WeatherAPIClientImpl) FetchWeather(city string) ([]byte, *appErr.AppErr
 
 	city = url.QueryEscape(city)
 
-	weatherUrl := fmt.Sprintf("http://api.weatherapi.com/v1/current.json?key=%v&q=%v", apiKey, city)
+	weatherUrl := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%v&q=%v", apiKey, city)
 
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Get(weatherUrl)
@@ -59,8 +54,8 @@ func (c *WeatherAPIClientImpl) FetchWeather(city string) ([]byte, *appErr.AppErr
 	return body, nil
 }
 
-func (ws *WeatherAPIClientImpl) ParseAPIError(body []byte) *appErr.AppError {
-	var apiErr dto.APIErrorResponse
+func (ws *WeatherAPIClient) ParseAPIError(body []byte) *appErr.AppError {
+	var apiErr APIErrorResponse
 	if err := json.Unmarshal(body, &apiErr); err != nil {
 		return nil
 	}

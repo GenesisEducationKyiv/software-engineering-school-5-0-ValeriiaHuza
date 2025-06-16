@@ -1,17 +1,25 @@
-package controller
+package subscription
 
 import (
 	"net/http"
 
-	"github.com/ValeriiaHuza/weather_api/service"
+	appErr "github.com/ValeriiaHuza/weather_api/error"
 	"github.com/gin-gonic/gin"
 )
 
-type SubscribeController struct {
-	Service service.SubscribeService
+type subscribeService interface {
+	SubscribeForWeatherUpdates(email, city, frequency string) *appErr.AppError
+	ConfirmSubscription(token string) *appErr.AppError
+	Unsubscribe(token string) *appErr.AppError
+	GetConfirmedSubscriptionsByFrequency(freq Frequency) []Subscription
+	SendSubscriptionEmails(freq Frequency)
 }
 
-func NewSubscribeController(service service.SubscribeService) *SubscribeController {
+type SubscribeController struct {
+	Service subscribeService
+}
+
+func NewSubscribeController(service subscribeService) *SubscribeController {
 	return &SubscribeController{Service: service}
 }
 

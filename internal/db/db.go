@@ -6,14 +6,13 @@ import (
 	"os"
 	"time"
 
-	"github.com/ValeriiaHuza/weather_api/models"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-var DB *gorm.DB
+var db *gorm.DB
 
-func ConnectToDatabase() {
+func ConnectToDatabase() *gorm.DB {
 
 	host := os.Getenv("DB_HOST")
 	port := os.Getenv("DB_PORT")
@@ -27,9 +26,9 @@ func ConnectToDatabase() {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
-	if err := DB.AutoMigrate(&models.Subscription{}); err != nil {
-		log.Fatalf("AutoMigrate failed: %v", err)
-	}
+	AutomatedMigration(db)
+
+	return db
 }
 
 func ConnectToDBWithRetry(dsn string) error {
@@ -37,7 +36,7 @@ func ConnectToDBWithRetry(dsn string) error {
 	for i := 1; i <= maxRetries; i++ {
 		fmt.Printf("Connecting to DB (attempt %d/%d)...\n", i, maxRetries)
 		var err error
-		DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
 		if err == nil {
 			fmt.Println("Connected to database")
 			return nil

@@ -1,45 +1,39 @@
-package service
+package mailer
 
 import (
 	"log"
 	"os"
 
-	"github.com/ValeriiaHuza/weather_api/dto"
-	"github.com/ValeriiaHuza/weather_api/models"
-	"github.com/ValeriiaHuza/weather_api/utils"
+	"github.com/ValeriiaHuza/weather_api/internal/emailBuilder"
+	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
+	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
 	"gopkg.in/gomail.v2"
 )
 
-type MailerService interface {
-	SendConfirmationEmail(sub models.Subscription)
-	SendConfirmSuccessEmail(sub models.Subscription)
-	SendWeatherUpdateEmail(sub models.Subscription, weather dto.WeatherDTO)
+type MailService struct {
+	Builder emailBuilder.WeatherEmailBuilder
 }
 
-type MailerServiceImpl struct {
-	Builder utils.WeatherEmailBuilder
+func NewMailerService(builder emailBuilder.WeatherEmailBuilder) *MailService {
+	return &MailService{Builder: builder}
 }
 
-func NewMailerService(builder utils.WeatherEmailBuilder) *MailerServiceImpl {
-	return &MailerServiceImpl{Builder: builder}
-}
-
-func (ms *MailerServiceImpl) SendConfirmationEmail(sub models.Subscription) {
+func (ms *MailService) SendConfirmationEmail(sub subscription.Subscription) {
 	body := ms.Builder.BuildConfirmationEmail(sub)
 	ms.send(sub.Email, "Weather updates confirmation link", body)
 }
 
-func (ms *MailerServiceImpl) SendConfirmSuccessEmail(sub models.Subscription) {
+func (ms *MailService) SendConfirmSuccessEmail(sub subscription.Subscription) {
 	body := ms.Builder.BuildConfirmSuccessEmail(sub)
 	ms.send(sub.Email, "Weather updates subscription", body)
 }
 
-func (ms *MailerServiceImpl) SendWeatherUpdateEmail(sub models.Subscription, weather dto.WeatherDTO) {
+func (ms *MailService) SendWeatherUpdateEmail(sub subscription.Subscription, weather weather.WeatherDTO) {
 	body := ms.Builder.BuildWeatherUpdateEmail(sub, weather)
 	ms.send(sub.Email, "Weather Update", body)
 }
 
-func (ms *MailerServiceImpl) send(to, subject, body string) {
+func (ms *MailService) send(to, subject, body string) {
 	if os.Getenv("MAIL_EMAIL") == "" || os.Getenv("MAIL_PASSWORD") == "" {
 		log.Println("MAIL_EMAIL and MAIL_PASSWORD environment variables are required")
 		return
