@@ -7,26 +7,24 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-
-	"github.com/ValeriiaHuza/weather_api/config"
 )
 
 type WeatherAPIClient struct {
+	apiKey string
 	client *http.Client
 }
 
-func NewWeatherAPIClient(http *http.Client) *WeatherAPIClient {
+func NewWeatherAPIClient(apiKey string, http *http.Client) *WeatherAPIClient {
 	return &WeatherAPIClient{
+		apiKey: apiKey,
 		client: http,
 	}
 }
 
 func (c *WeatherAPIClient) FetchWeather(city string) (*WeatherDTO, error) {
-	apiKey := config.AppConfig.WeatherAPIKey
-
 	city = url.QueryEscape(city)
 
-	weatherUrl := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%v&q=%v", apiKey, city)
+	weatherUrl := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%v&q=%v", c.apiKey, city)
 
 	resp, err := c.client.Get(weatherUrl)
 

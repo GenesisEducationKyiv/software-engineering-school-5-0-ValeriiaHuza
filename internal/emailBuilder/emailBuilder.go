@@ -5,22 +5,25 @@ import (
 	"html"
 	"time"
 
-	"github.com/ValeriiaHuza/weather_api/config"
 	"github.com/ValeriiaHuza/weather_api/internal/client"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
 )
 
-type WeatherEmailBuilder struct{}
+type WeatherEmailBuilder struct {
+	appUrl string
+}
 
-func NewWeatherEmailBuilder() *WeatherEmailBuilder {
-	return &WeatherEmailBuilder{}
+func NewWeatherEmailBuilder(appUrl string) *WeatherEmailBuilder {
+	return &WeatherEmailBuilder{
+		appUrl: appUrl,
+	}
 }
 
 func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(
 	sub subscription.Subscription,
 	weather client.WeatherDTO) string {
 
-	unsubscribeLink := w.BuildURL("/api/unsubscribe/") + sub.Token
+	unsubscribeLink := w.buildURL("/api/unsubscribe/") + sub.Token
 	now := time.Now()
 
 	sub.City = html.EscapeString(sub.City)
@@ -45,7 +48,7 @@ func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(
 }
 
 func (w *WeatherEmailBuilder) BuildConfirmationEmail(sub subscription.Subscription) string {
-	confirmationLink := w.BuildURL("/api/confirm/") + sub.Token
+	confirmationLink := w.buildURL("/api/confirm/") + sub.Token
 	return fmt.Sprintf(`
 		<p>Hello from Weather Updates!</p>
 		<p>You subscribed for <strong>%s</strong> updates for <strong>%s</strong> weather.</p>
@@ -55,7 +58,7 @@ func (w *WeatherEmailBuilder) BuildConfirmationEmail(sub subscription.Subscripti
 }
 
 func (w *WeatherEmailBuilder) BuildConfirmSuccessEmail(sub subscription.Subscription) string {
-	unsubscribeLink := w.BuildURL("/api/unsubscribe/") + sub.Token
+	unsubscribeLink := w.buildURL("/api/unsubscribe/") + sub.Token
 	return fmt.Sprintf(`
 		<p>Hello from Weather Updates!</p>
 		<p>You have successfully confirmed your subscription!</p>
@@ -64,7 +67,6 @@ func (w *WeatherEmailBuilder) BuildConfirmSuccessEmail(sub subscription.Subscrip
 		unsubscribeLink)
 }
 
-func (w *WeatherEmailBuilder) BuildURL(path string) string {
-	host := config.AppConfig.AppURL
-	return host + path
+func (w *WeatherEmailBuilder) buildURL(path string) string {
+	return w.appUrl + path
 }

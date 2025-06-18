@@ -3,19 +3,29 @@ package mailer
 import (
 	"log"
 
-	"github.com/ValeriiaHuza/weather_api/config"
 	"github.com/ValeriiaHuza/weather_api/internal/client"
-	"github.com/ValeriiaHuza/weather_api/internal/emailBuilder"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
 	"gopkg.in/gomail.v2"
 )
 
-type MailService struct {
-	builder emailBuilder.WeatherEmailBuilder
+type weatherEmailBuilder interface {
+	BuildWeatherUpdateEmail(sub subscription.Subscription, weather client.WeatherDTO) string
+	BuildConfirmationEmail(sub subscription.Subscription) string
+	BuildConfirmSuccessEmail(sub subscription.Subscription) string
 }
 
-func NewMailerService(builder emailBuilder.WeatherEmailBuilder) *MailService {
-	return &MailService{builder: builder}
+type MailService struct {
+	mailEmal string
+	dialer   *gomail.Dialer
+	builder  weatherEmailBuilder
+}
+
+func NewMailerService(mailEmal string, dialer *gomail.Dialer,
+	builder weatherEmailBuilder) *MailService {
+	return &MailService{
+		mailEmal: mailEmal,
+		dialer:   dialer,
+		builder:  builder}
 }
 
 func (ms *MailService) SendConfirmationEmail(sub subscription.Subscription) {
@@ -34,18 +44,13 @@ func (ms *MailService) SendWeatherUpdateEmail(sub subscription.Subscription, wea
 }
 
 func (ms *MailService) send(to, subject, body string) {
-	from := config.AppConfig.MailEmail
-	password := config.AppConfig.MailPassword
-
 	m := gomail.NewMessage()
-	m.SetHeader("From", from)
+	m.SetHeader("From", ms.mailEmal)
 	m.SetHeader("To", to)
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/html", body)
 
-	d := gomail.NewDialer("smtp.gmail.com", 587, from, password)
-
-	if err := d.DialAndSend(m); err != nil {
+	if err := ms.dialer.DialAndSend(m); err != nil {
 		log.Println("Email send failed:", err)
 	} else {
 		log.Println("Email sent to", to)

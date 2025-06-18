@@ -1,7 +1,7 @@
-package main
+package app
 
 import (
-	"log"
+	"context"
 	"strconv"
 
 	"github.com/ValeriiaHuza/weather_api/config"
@@ -15,12 +15,16 @@ import (
 	"github.com/ValeriiaHuza/weather_api/internal/scheduler"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
 	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
-
 	"github.com/gin-gonic/gin"
+	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
 
-func main() {
+func Run(ctx context.Context) error {
+	return initApp(ctx)
+}
+
+func initApp(ctx context.Context) error {
 	config.LoadEnvVariables()
 
 	db := initDatabase()
@@ -31,8 +35,9 @@ func main() {
 	initRoutes(router, services)
 	startBackgroundJobs(services.subscribeService)
 
-	startServer(router)
+	return startServer(router)
 }
+
 func initDatabase() *gorm.DB {
 	return db.ConnectToDatabase()
 }
@@ -63,24 +68,26 @@ func startBackgroundJobs(subscribeService subscription.SubscribeService) {
 	schedulerService.StartCronJobs()
 }
 
-func startServer(router *gin.Engine) {
+func startServer(router *gin.Engine) error {
 	port := strconv.Itoa(config.AppConfig.AppPort)
 
-	if err := router.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
+	return router.Run(":" + port)
 }
 
 func initServices(database *gorm.DB) *Services {
 
 	http := httpclient.InitHtttClient()
 
-	weatherClient := client.NewWeatherAPIClient(&http)
+	weatherClient := client.NewWeatherAPIClient(config.AppConfig.WeatherAPIKey, &http)
 	weatherService := weather.NewWeatherAPIService(weatherClient)
 
 	subscribeRepo := repository.NewSubscriptionRepository(database)
-	emailBuilder := emailBuilder.NewWeatherEmailBuilder()
-	mailerService := mailer.NewMailerService(*emailBuilder)
+	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.AppConfig.AppURL)
+
+	mailEmail := config.AppConfig.MailEmail
+	dialer := gomail.NewDialer("smtp.gmail.com", 587, mailEmail, config.AppConfig.MailPassword)
+	mailerService := mailer.NewMailerService(mailEmail, dialer, emailBuilder)
+
 	subscribeService := subscription.NewSubscribeService(weatherService, mailerService, subscribeRepo)
 
 	return &Services{

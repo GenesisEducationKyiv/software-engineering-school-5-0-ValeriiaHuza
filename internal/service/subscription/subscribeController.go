@@ -31,14 +31,14 @@ func (sc *SubscribeController) SubscribeForWeatherUpdates(c *gin.Context) {
 		Frequency string `json:"frequency"`
 	}
 
-	err := c.Bind(&body)
+	err := c.ShouldBindJSON(&body)
 
 	if err != nil {
 		c.String(http.StatusBadRequest, "Invalid input")
 		return
 	}
 
-	frequency, err := sc.validateSubscriptionInput(body.Email, body.City, body.Frequency)
+	frequency, err := sc.validateSubscriptionInputAndParseFrequency(body.Email, body.City, body.Frequency)
 	if err != nil {
 		HandleError(c, err)
 		return
@@ -90,7 +90,7 @@ func (sc *SubscribeController) Unsubscribe(c *gin.Context) {
 	c.String(http.StatusOK, "You unsubscribe from weather update.")
 }
 
-func (sc *SubscribeController) validateSubscriptionInput(email string,
+func (sc *SubscribeController) validateSubscriptionInputAndParseFrequency(email string,
 	city string, frequencyStr string) (Frequency, error) {
 	if email == "" || city == "" || frequencyStr == "" {
 		return "", ErrInvalidInput
