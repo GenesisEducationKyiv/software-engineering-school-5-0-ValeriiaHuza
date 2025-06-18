@@ -1,14 +1,15 @@
 package weather
 
 import (
+	"errors"
 	"net/http"
 
-	appErr "github.com/ValeriiaHuza/weather_api/error"
+	"github.com/ValeriiaHuza/weather_api/internal/client"
 	"github.com/gin-gonic/gin"
 )
 
 type weatherService interface {
-	GetWeather(city string) (*WeatherDTO, *appErr.AppError)
+	GetWeather(city string) (*client.WeatherDTO, error)
 }
 
 type WeatherController struct {
@@ -20,13 +21,32 @@ func NewWeatherController(service weatherService) *WeatherController {
 }
 
 func (wc *WeatherController) GetWeather(c *gin.Context) {
-	city := c.Query("city")
-
-	weather, err := wc.service.GetWeather(city)
-
+	city, err := validateCityQuery(c)
 	if err != nil {
-		c.String(err.StatusCode, err.Message)
+		c.String(http.StatusBadRequest, err.Error())
 		return
 	}
-	c.JSON(http.StatusOK, weather)
+
+	response, err := wc.service.GetWeather(city)
+
+	if err != nil {
+		switch {
+		case errors.Is(err, client.ErrCityNotFound):
+			c.String(http.StatusNotFound, err.Error())
+		case errors.Is(err, client.ErrInvalidRequest):
+			c.String(http.StatusBadRequest, err.Error())
+		default:
+			c.String(http.StatusBadRequest, "Bad request")
+		}
+	}
+
+	c.JSON(http.StatusOK, response)
+}
+
+func validateCityQuery(c *gin.Context) (string, error) {
+	city := c.Query("city")
+	if city == "" {
+		return "", ErrInvalidCityInput // you can define this as a custom error
+	}
+	return city, nil
 }

@@ -12,12 +12,12 @@ type subscribeService interface {
 }
 
 type Scheduler struct {
-	SubscribeService subscribeService
+	subscribeService subscribeService
 }
 
 func NewScheduler(subscribeService subscribeService) *Scheduler {
 	return &Scheduler{
-		SubscribeService: subscribeService,
+		subscribeService: subscribeService,
 	}
 }
 
@@ -26,14 +26,14 @@ func (ss *Scheduler) StartCronJobs() {
 
 	// at 9 oclock
 	if _, err := c.AddFunc("0 9 * * *", func() {
-		ss.SubscribeService.SendSubscriptionEmails(subscription.FrequencyDaily)
+		ss.subscribeService.SendSubscriptionEmails(subscription.FrequencyDaily)
 	}); err != nil {
 		log.Println("Failed to schedule daily job:", err)
 	}
 
 	// Every hour
 	if _, err := c.AddFunc("0 * * * *", func() {
-		ss.SubscribeService.SendSubscriptionEmails(subscription.FrequencyHourly)
+		ss.subscribeService.SendSubscriptionEmails(subscription.FrequencyHourly)
 	}); err != nil {
 		log.Println("Failed to schedule hourly job:", err)
 	}

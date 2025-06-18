@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/ValeriiaHuza/weather_api/config"
+	"github.com/ValeriiaHuza/weather_api/internal/client"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
-	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
 )
 
 type WeatherEmailBuilder struct{}
@@ -18,7 +18,7 @@ func NewWeatherEmailBuilder() *WeatherEmailBuilder {
 
 func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(
 	sub subscription.Subscription,
-	weather weather.WeatherDTO) string {
+	weather client.WeatherDTO) string {
 
 	unsubscribeLink := w.BuildURL("/api/unsubscribe/") + sub.Token
 	now := time.Now()

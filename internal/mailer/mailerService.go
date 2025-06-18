@@ -4,32 +4,32 @@ import (
 	"log"
 
 	"github.com/ValeriiaHuza/weather_api/config"
+	"github.com/ValeriiaHuza/weather_api/internal/client"
 	"github.com/ValeriiaHuza/weather_api/internal/emailBuilder"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
-	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
 	"gopkg.in/gomail.v2"
 )
 
 type MailService struct {
-	Builder emailBuilder.WeatherEmailBuilder
+	builder emailBuilder.WeatherEmailBuilder
 }
 
 func NewMailerService(builder emailBuilder.WeatherEmailBuilder) *MailService {
-	return &MailService{Builder: builder}
+	return &MailService{builder: builder}
 }
 
 func (ms *MailService) SendConfirmationEmail(sub subscription.Subscription) {
-	body := ms.Builder.BuildConfirmationEmail(sub)
+	body := ms.builder.BuildConfirmationEmail(sub)
 	ms.send(sub.Email, "Weather updates confirmation link", body)
 }
 
 func (ms *MailService) SendConfirmSuccessEmail(sub subscription.Subscription) {
-	body := ms.Builder.BuildConfirmSuccessEmail(sub)
+	body := ms.builder.BuildConfirmSuccessEmail(sub)
 	ms.send(sub.Email, "Weather updates subscription", body)
 }
 
-func (ms *MailService) SendWeatherUpdateEmail(sub subscription.Subscription, weather weather.WeatherDTO) {
-	body := ms.Builder.BuildWeatherUpdateEmail(sub, weather)
+func (ms *MailService) SendWeatherUpdateEmail(sub subscription.Subscription, weather client.WeatherDTO) {
+	body := ms.builder.BuildWeatherUpdateEmail(sub, weather)
 	ms.send(sub.Email, "Weather Update", body)
 }
 

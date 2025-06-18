@@ -2,10 +2,8 @@ package subscription
 
 import (
 	"log"
-	"regexp"
 
-	appErr "github.com/ValeriiaHuza/weather_api/error"
-	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
+	"github.com/ValeriiaHuza/weather_api/internal/client"
 
 	"github.com/google/uuid"
 )
@@ -22,35 +20,42 @@ type subscriptionRepository interface {
 type mailService interface {
 	SendConfirmationEmail(sub Subscription)
 	SendConfirmSuccessEmail(sub Subscription)
-	SendWeatherUpdateEmail(sub Subscription, weather weather.WeatherDTO)
+	SendWeatherUpdateEmail(sub Subscription, weather client.WeatherDTO)
 }
 
 type weatherService interface {
-	GetWeather(city string) (*weather.WeatherDTO, *appErr.AppError)
+	GetWeather(city string) (*client.WeatherDTO, error)
 }
 
 type SubscribeService struct {
-	WeatherService         weatherService
-	MailService            mailService
-	SubscriptionRepository subscriptionRepository
+	weatherService         weatherService
+	mailService            mailService
+	subscriptionRepository subscriptionRepository
 }
 
 func NewSubscribeService(weatherService weatherService,
 	mailService mailService,
 	repository subscriptionRepository) *SubscribeService {
 	return &SubscribeService{
-		WeatherService:         weatherService,
-		MailService:            mailService,
-		SubscriptionRepository: repository,
+		weatherService:         weatherService,
+		mailService:            mailService,
+		subscriptionRepository: repository,
 	}
 }
 
 func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
-	city string, frequencyStr string) *appErr.AppError {
+	city string, frequency Frequency) error {
 
-	frequency, err := ss.validateSubscriptionInput(email, city, frequencyStr)
-	if err != nil {
+	if _, err := ss.weatherService.GetWeather(city); err != nil {
 		return err
+	}
+
+	subscribed, err := ss.emailSubscribed(email)
+	if subscribed {
+		return ErrEmailAlreadySubscribed
+	}
+	if err != nil {
+		return ErrInvalidInput
 	}
 
 	token := ss.generateToken()
@@ -62,83 +67,51 @@ func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
 		Confirmed: false,
 	}
 
-	if err := ss.SubscriptionRepository.Create(newSubscription); err != nil {
+	if err := ss.subscriptionRepository.Create(newSubscription); err != nil {
 		log.Println("Db error : ", err.Error())
-		return appErr.ErrFailedToSaveSubscription
+		return ErrFailedToSaveSubscription
 	}
 
-	ss.MailService.SendConfirmationEmail(newSubscription)
+	ss.mailService.SendConfirmationEmail(newSubscription)
 
 	return nil
 }
 
-func (ss *SubscribeService) validateSubscriptionInput(email string,
-	city string, frequencyStr string) (Frequency, *appErr.AppError) {
-	if email == "" || city == "" || frequencyStr == "" {
-		return "", appErr.ErrInvalidInput
-	}
+func (ss *SubscribeService) ConfirmSubscription(token string) error {
 
-	if !ss.isValidEmail(email) {
-		return "", appErr.ErrInvalidInput
-	}
-
-	if _, err := ss.WeatherService.GetWeather(city); err != nil {
-		return "", err
-	}
-
-	frequency, err := ParseFrequency(frequencyStr)
-	if err != nil {
-		return "", appErr.ErrInvalidInput
-	}
-
-	subscribed, err := ss.emailSubscribed(email)
-	if subscribed {
-		return "", appErr.ErrEmailSubscribed
-	}
-	if err != nil {
-		return "", appErr.ErrInvalidInput
-	}
-
-	return frequency, nil
-}
-
-func (ss *SubscribeService) ConfirmSubscription(token string) *appErr.AppError {
-	if token == "" {
-		return appErr.ErrInvalidToken
-	}
-
-	sub, err := ss.SubscriptionRepository.FindByToken(token)
+	sub, err := ss.subscriptionRepository.FindByToken(token)
 
 	if err != nil {
-		return appErr.ErrTokenNotFound
+		return ErrTokenNotFound
 	}
 
 	sub.Confirmed = true
 
-	if err := ss.SubscriptionRepository.Update(*sub); err != nil {
+	if err := ss.subscriptionRepository.Update(*sub); err != nil {
 		log.Println("Failed to update subscription:", err)
-		return appErr.ErrFailedToSaveSubscription
+		return ErrFailedToSaveSubscription
 	}
 
-	ss.MailService.SendConfirmSuccessEmail(*sub)
+	ss.mailService.SendConfirmSuccessEmail(*sub)
 
 	return nil
 }
 
-func (ss *SubscribeService) Unsubscribe(token string) *appErr.AppError {
-	if token == "" {
-		return appErr.ErrInvalidToken
-	}
+func (ss *SubscribeService) Unsubscribe(token string) error {
 
-	sub, err := ss.SubscriptionRepository.FindByToken(token)
+	sub, err := ss.subscriptionRepository.FindByToken(token)
 
 	if err != nil {
-		return appErr.ErrTokenNotFound
+		return ErrTokenNotFound
 	}
 
-	if err := ss.SubscriptionRepository.Delete(*sub); err != nil {
+	if sub == nil {
+		return nil
+	}
+
+	if err := ss.subscriptionRepository.Delete(*sub); err != nil {
 		log.Println("Failed to delete subscription:", err)
-		return appErr.ErrInvalidInput
+		return ErrInvalidInput
 	}
 
 	return nil
@@ -146,14 +119,9 @@ func (ss *SubscribeService) Unsubscribe(token string) *appErr.AppError {
 
 func (ss *SubscribeService) emailSubscribed(email string) (bool, error) {
 
-	sub, err := ss.SubscriptionRepository.FindByEmail(email)
+	sub, err := ss.subscriptionRepository.FindByEmail(email)
 
 	return sub != nil, err
-}
-
-func (ss *SubscribeService) isValidEmail(email string) bool {
-	re := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
-	return re.MatchString(email)
 }
 
 func (ss *SubscribeService) generateToken() string {
@@ -166,18 +134,18 @@ func (ss *SubscribeService) SendSubscriptionEmails(freq Frequency) {
 	log.Printf("Found %d %s subscriptions.", len(subs), string(freq))
 
 	for _, sub := range subs {
-		weather, err := ss.WeatherService.GetWeather(sub.City)
+		weather, err := ss.weatherService.GetWeather(sub.City)
 		if err != nil {
 			log.Println("Weather error for", sub.City, ":", err)
 			continue
 		}
 
-		ss.MailService.SendWeatherUpdateEmail(sub, *weather)
+		ss.mailService.SendWeatherUpdateEmail(sub, *weather)
 	}
 }
 
 func (ss *SubscribeService) GetConfirmedSubscriptionsByFrequency(freq Frequency) []Subscription {
-	subs, err := ss.SubscriptionRepository.FindByFrequencyAndConfirmation(freq)
+	subs, err := ss.subscriptionRepository.FindByFrequencyAndConfirmation(freq)
 
 	if err != nil {
 		log.Println("Error fetching confirmed subscriptions:", err)

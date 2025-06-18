@@ -1,49 +1,32 @@
 package weather
 
 import (
-	"encoding/json"
 	"log"
 
-	appErr "github.com/ValeriiaHuza/weather_api/error"
+	"github.com/ValeriiaHuza/weather_api/internal/client"
 )
 
 type weatherAPIClient interface {
-	FetchWeather(city string) ([]byte, *appErr.AppError)
+	FetchWeather(city string) (*client.WeatherDTO, error)
 }
 
 type WeatherService struct {
-	WeatherClient weatherAPIClient
+	weatherClient weatherAPIClient
 }
 
 func NewWeatherAPIService(weatherClient weatherAPIClient) *WeatherService {
 	return &WeatherService{
-		WeatherClient: weatherClient,
+		weatherClient: weatherClient,
 	}
 }
 
-func (ws *WeatherService) GetWeather(city string) (*WeatherDTO, *appErr.AppError) {
-	if city == "" {
-		return nil, appErr.ErrInvalidRequest
-	}
+func (ws *WeatherService) GetWeather(city string) (*client.WeatherDTO, error) {
 
-	body, err := ws.WeatherClient.FetchWeather(city)
+	weatherDto, err := ws.weatherClient.FetchWeather(city)
 	if err != nil {
-		log.Println("HTTP error:", err)
+		log.Println("HTTP error in GetWeather :", err)
 		return nil, err
 	}
 
-	var weather WeatherResponse
-
-	if err := json.Unmarshal(body, &weather); err != nil {
-		log.Println("Failed to parse JSON:", err)
-		return nil, appErr.ErrInvalidRequest
-	}
-
-	weatherDTO := WeatherDTO{
-		Temperature: weather.Current.TempC,
-		Humidity:    weather.Current.Humidity,
-		Description: weather.Current.Condition.Text,
-	}
-
-	return &weatherDTO, nil
+	return weatherDto, nil
 }

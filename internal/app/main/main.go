@@ -8,6 +8,7 @@ import (
 	"github.com/ValeriiaHuza/weather_api/internal/client"
 	"github.com/ValeriiaHuza/weather_api/internal/db"
 	"github.com/ValeriiaHuza/weather_api/internal/emailBuilder"
+	"github.com/ValeriiaHuza/weather_api/internal/httpclient"
 	"github.com/ValeriiaHuza/weather_api/internal/mailer"
 	"github.com/ValeriiaHuza/weather_api/internal/repository"
 	"github.com/ValeriiaHuza/weather_api/internal/routes"
@@ -71,7 +72,10 @@ func startServer(router *gin.Engine) {
 }
 
 func initServices(database *gorm.DB) *Services {
-	weatherClient := &client.WeatherAPIClient{}
+
+	http := httpclient.InitHtttClient()
+
+	weatherClient := client.NewWeatherAPIClient(&http)
 	weatherService := weather.NewWeatherAPIService(weatherClient)
 
 	subscribeRepo := repository.NewSubscriptionRepository(database)
