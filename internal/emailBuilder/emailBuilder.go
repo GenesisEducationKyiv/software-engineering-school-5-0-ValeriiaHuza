@@ -21,10 +21,10 @@ func NewWeatherEmailBuilder(appUrl string) *WeatherEmailBuilder {
 
 func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(
 	sub subscription.Subscription,
-	weather client.WeatherDTO) string {
+	weather client.WeatherDTO,
+	time time.Time) string {
 
 	unsubscribeLink := w.buildURL("/api/unsubscribe/") + sub.Token
-	now := time.Now()
 
 	sub.City = html.EscapeString(sub.City)
 	weather.Description = html.EscapeString(weather.Description)
@@ -38,8 +38,8 @@ func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(
 		<strong>Description:</strong> %s</p>
 		<p><a href="%s">Unsubscribe here</a></p>`,
 		sub.City,
-		now.Format("January 2, 2006"),
-		now.Format("15:04"),
+		time.Format("January 2, 2006"),
+		time.Format("15:04"),
 		weather.Temperature,
 		weather.Humidity,
 		weather.Description,

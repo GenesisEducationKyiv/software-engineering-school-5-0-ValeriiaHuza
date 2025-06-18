@@ -2,6 +2,7 @@ package mailer
 
 import (
 	"log"
+	"time"
 
 	"github.com/ValeriiaHuza/weather_api/internal/client"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
@@ -9,7 +10,7 @@ import (
 )
 
 type weatherEmailBuilder interface {
-	BuildWeatherUpdateEmail(sub subscription.Subscription, weather client.WeatherDTO) string
+	BuildWeatherUpdateEmail(sub subscription.Subscription, weather client.WeatherDTO, time time.Time) string
 	BuildConfirmationEmail(sub subscription.Subscription) string
 	BuildConfirmSuccessEmail(sub subscription.Subscription) string
 }
@@ -39,7 +40,7 @@ func (ms *MailService) SendConfirmSuccessEmail(sub subscription.Subscription) {
 }
 
 func (ms *MailService) SendWeatherUpdateEmail(sub subscription.Subscription, weather client.WeatherDTO) {
-	body := ms.builder.BuildWeatherUpdateEmail(sub, weather)
+	body := ms.builder.BuildWeatherUpdateEmail(sub, weather, time.Now())
 	ms.send(sub.Email, "Weather Update", body)
 }
 
