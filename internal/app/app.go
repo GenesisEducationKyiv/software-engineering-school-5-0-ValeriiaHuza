@@ -1,7 +1,6 @@
 package app
 
 import (
-	"context"
 	"strconv"
 
 	"github.com/ValeriiaHuza/weather_api/config"
@@ -20,11 +19,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func Run(ctx context.Context) error {
-	return initApp(ctx)
-}
-
-func initApp(ctx context.Context) error {
+func Run() error {
 	config.LoadEnvVariables()
 
 	db := initDatabase()
