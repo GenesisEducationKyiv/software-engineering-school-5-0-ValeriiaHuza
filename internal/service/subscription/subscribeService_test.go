@@ -9,81 +9,78 @@ import (
 
 	"github.com/ValeriiaHuza/weather_api/internal/client"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 // --- Mocks ---
 
 type mockWeatherService struct {
-	getWeatherFunc func(city string) (*client.WeatherDTO, error)
+	mock.Mock
 }
 
 func (m *mockWeatherService) GetWeather(city string) (*client.WeatherDTO, error) {
-	return m.getWeatherFunc(city)
+	args := m.Called(city)
+	dto, _ := args.Get(0).(*client.WeatherDTO)
+	return dto, args.Error(1)
 }
 
 type mockMailService struct {
-	sentConfirmationEmail      *Subscription
-	sentConfirmSuccessEmail    *Subscription
-	sentWeatherUpdateEmailSub  *Subscription
-	sentWeatherUpdateEmailData *client.WeatherDTO
+	mock.Mock
 }
 
 func (m *mockMailService) SendConfirmationEmail(sub Subscription) {
-	m.sentConfirmationEmail = &sub
+	m.Called(sub)
 }
 func (m *mockMailService) SendConfirmSuccessEmail(sub Subscription) {
-	m.sentConfirmSuccessEmail = &sub
+	m.Called(sub)
 }
 func (m *mockMailService) SendWeatherUpdateEmail(sub Subscription, weather client.WeatherDTO) {
-	m.sentWeatherUpdateEmailSub = &sub
-	m.sentWeatherUpdateEmailData = &weather
+	m.Called(sub, weather)
 }
 
 type mockSubscriptionRepository struct {
-	createFunc                      func(sub Subscription) error
-	updateFunc                      func(sub Subscription) error
-	findByTokenFunc                 func(token string) (*Subscription, error)
-	deleteFunc                      func(sub Subscription) error
-	findByEmailFunc                 func(email string) (*Subscription, error)
-	findByFrequencyAndConfirmationF func(freq Frequency) ([]Subscription, error)
+	mock.Mock
 }
 
 func (m *mockSubscriptionRepository) Create(sub Subscription) error {
-	return m.createFunc(sub)
+	args := m.Called(sub)
+	return args.Error(0)
 }
 func (m *mockSubscriptionRepository) Update(sub Subscription) error {
-	return m.updateFunc(sub)
+	args := m.Called(sub)
+	return args.Error(0)
 }
 func (m *mockSubscriptionRepository) FindByToken(token string) (*Subscription, error) {
-	return m.findByTokenFunc(token)
+	args := m.Called(token)
+	sub, _ := args.Get(0).(*Subscription)
+	return sub, args.Error(1)
 }
 func (m *mockSubscriptionRepository) Delete(sub Subscription) error {
-	return m.deleteFunc(sub)
+	args := m.Called(sub)
+	return args.Error(0)
 }
 func (m *mockSubscriptionRepository) FindByEmail(email string) (*Subscription, error) {
-	return m.findByEmailFunc(email)
+	args := m.Called(email)
+	sub, _ := args.Get(0).(*Subscription)
+	return sub, args.Error(1)
 }
 func (m *mockSubscriptionRepository) FindByFrequencyAndConfirmation(freq Frequency) ([]Subscription, error) {
-	return m.findByFrequencyAndConfirmationF(freq)
+	args := m.Called(freq)
+	subs, _ := args.Get(0).([]Subscription)
+	return subs, args.Error(1)
 }
 
 // --- Tests ---
 
 func TestSubscribeForWeatherUpdates_Success(t *testing.T) {
-	mockWeather := &mockWeatherService{
-		getWeatherFunc: func(city string) (*client.WeatherDTO, error) {
-			return &client.WeatherDTO{}, nil
-		},
-	}
-	mockMail := &mockMailService{}
-	mockRepo := &mockSubscriptionRepository{
-		findByEmailFunc: func(email string) (*Subscription, error) {
-			return nil, nil // not subscribed
-		},
-		createFunc: func(sub Subscription) error {
-			return nil
-		},
-	}
+	mockWeather := new(mockWeatherService)
+	mockMail := new(mockMailService)
+	mockRepo := new(mockSubscriptionRepository)
+
+	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{}, nil)
+	mockRepo.On("FindByEmail", "test@example.com").Return(nil, nil)
+	mockRepo.On("Create", mock.AnythingOfType("Subscription")).Return(nil)
+	mockMail.On("SendConfirmationEmail", mock.AnythingOfType("Subscription")).Return()
 
 	service := &SubscribeService{
 		weatherService:         mockWeather,
@@ -97,22 +94,17 @@ func TestSubscribeForWeatherUpdates_Success(t *testing.T) {
 
 	err := service.SubscribeForWeatherUpdates(email, city, freq)
 	assert.NoError(t, err)
-	assert.NotNil(t, mockMail.sentConfirmationEmail)
-	assert.Equal(t, email, mockMail.sentConfirmationEmail.Email)
-	assert.Equal(t, city, mockMail.sentConfirmationEmail.City)
-	assert.Equal(t, freq, mockMail.sentConfirmationEmail.Frequency)
-	assert.False(t, mockMail.sentConfirmationEmail.Confirmed)
-	assert.NotEmpty(t, mockMail.sentConfirmationEmail.Token)
+	mockWeather.AssertExpectations(t)
+	mockRepo.AssertExpectations(t)
+	mockMail.AssertExpectations(t)
 }
 
 func TestSubscribeForWeatherUpdates_WeatherServiceError(t *testing.T) {
-	mockWeather := &mockWeatherService{
-		getWeatherFunc: func(city string) (*client.WeatherDTO, error) {
-			return nil, errors.New("weather error")
-		},
-	}
-	mockMail := &mockMailService{}
-	mockRepo := &mockSubscriptionRepository{}
+	mockWeather := new(mockWeatherService)
+	mockMail := new(mockMailService)
+	mockRepo := new(mockSubscriptionRepository)
+
+	mockWeather.On("GetWeather", "Kyiv").Return(nil, errors.New("weather error"))
 
 	service := &SubscribeService{
 		weatherService:         mockWeather,
@@ -121,22 +113,20 @@ func TestSubscribeForWeatherUpdates_WeatherServiceError(t *testing.T) {
 	}
 
 	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
+
+	mockRepo.AssertNotCalled(t, "Create", mock.Anything)
+	mockMail.AssertNotCalled(t, "SendConfirmationEmail", mock.Anything)
 	assert.EqualError(t, err, "weather error")
-	assert.Nil(t, mockMail.sentConfirmationEmail)
+	mockWeather.AssertExpectations(t)
 }
 
 func TestSubscribeForWeatherUpdates_EmailAlreadySubscribed(t *testing.T) {
-	mockWeather := &mockWeatherService{
-		getWeatherFunc: func(city string) (*client.WeatherDTO, error) {
-			return &client.WeatherDTO{}, nil
-		},
-	}
-	mockMail := &mockMailService{}
-	mockRepo := &mockSubscriptionRepository{
-		findByEmailFunc: func(email string) (*Subscription, error) {
-			return &Subscription{Email: email}, nil // already subscribed
-		},
-	}
+	mockWeather := new(mockWeatherService)
+	mockMail := new(mockMailService)
+	mockRepo := new(mockSubscriptionRepository)
+
+	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{}, nil)
+	mockRepo.On("FindByEmail", "test@example.com").Return(&Subscription{Email: "test@example.com"}, nil)
 
 	service := &SubscribeService{
 		weatherService:         mockWeather,
@@ -146,21 +136,20 @@ func TestSubscribeForWeatherUpdates_EmailAlreadySubscribed(t *testing.T) {
 
 	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
 	assert.Equal(t, ErrEmailAlreadySubscribed, err)
-	assert.Nil(t, mockMail.sentConfirmationEmail)
+
+	mockRepo.AssertNotCalled(t, "Create", mock.Anything)
+	mockMail.AssertNotCalled(t, "SendConfirmationEmail", mock.Anything)
+	mockWeather.AssertExpectations(t)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestSubscribeForWeatherUpdates_FindByEmailError(t *testing.T) {
-	mockWeather := &mockWeatherService{
-		getWeatherFunc: func(city string) (*client.WeatherDTO, error) {
-			return &client.WeatherDTO{}, nil
-		},
-	}
-	mockMail := &mockMailService{}
-	mockRepo := &mockSubscriptionRepository{
-		findByEmailFunc: func(email string) (*Subscription, error) {
-			return nil, errors.New("db error")
-		},
-	}
+	mockWeather := new(mockWeatherService)
+	mockMail := new(mockMailService)
+	mockRepo := new(mockSubscriptionRepository)
+
+	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{}, nil)
+	mockRepo.On("FindByEmail", "test@example.com").Return(nil, errors.New("db error"))
 
 	service := &SubscribeService{
 		weatherService:         mockWeather,
@@ -169,25 +158,22 @@ func TestSubscribeForWeatherUpdates_FindByEmailError(t *testing.T) {
 	}
 
 	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
+
 	assert.Equal(t, ErrInvalidInput, err)
-	assert.Nil(t, mockMail.sentConfirmationEmail)
+	mockRepo.AssertNotCalled(t, "Create", mock.Anything)
+	mockMail.AssertNotCalled(t, "SendConfirmationEmail", mock.Anything)
+	mockWeather.AssertExpectations(t)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestSubscribeForWeatherUpdates_CreateError(t *testing.T) {
-	mockWeather := &mockWeatherService{
-		getWeatherFunc: func(city string) (*client.WeatherDTO, error) {
-			return &client.WeatherDTO{}, nil
-		},
-	}
-	mockMail := &mockMailService{}
-	mockRepo := &mockSubscriptionRepository{
-		findByEmailFunc: func(email string) (*Subscription, error) {
-			return nil, nil
-		},
-		createFunc: func(sub Subscription) error {
-			return errors.New("db error")
-		},
-	}
+	mockWeather := new(mockWeatherService)
+	mockMail := new(mockMailService)
+	mockRepo := new(mockSubscriptionRepository)
+
+	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{}, nil)
+	mockRepo.On("FindByEmail", "test@example.com").Return(nil, nil)
+	mockRepo.On("Create", mock.AnythingOfType("Subscription")).Return(errors.New("db error"))
 
 	service := &SubscribeService{
 		weatherService:         mockWeather,
@@ -197,9 +183,14 @@ func TestSubscribeForWeatherUpdates_CreateError(t *testing.T) {
 
 	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
 	assert.Equal(t, ErrFailedToSaveSubscription, err)
-	assert.Nil(t, mockMail.sentConfirmationEmail)
+	mockMail.AssertNotCalled(t, "SendConfirmationEmail", mock.Anything)
+	mockWeather.AssertExpectations(t)
+	mockRepo.AssertExpectations(t)
+
 }
 func TestConfirmSubscription_Success(t *testing.T) {
+	mockRepo := new(mockSubscriptionRepository)
+	mockMail := new(mockMailService)
 	mockSub := &Subscription{
 		Email:     "test@example.com",
 		City:      "Kyiv",
@@ -207,18 +198,15 @@ func TestConfirmSubscription_Success(t *testing.T) {
 		Token:     "token123",
 		Confirmed: false,
 	}
-	mockRepo := &mockSubscriptionRepository{
-		findByTokenFunc: func(token string) (*Subscription, error) {
-			assert.Equal(t, "token123", token)
-			return mockSub, nil
-		},
-		updateFunc: func(sub Subscription) error {
-			assert.True(t, sub.Confirmed)
-			assert.Equal(t, mockSub.Email, sub.Email)
-			return nil
-		},
-	}
-	mockMail := &mockMailService{}
+
+	mockRepo.On("FindByToken", "token123").Return(mockSub, nil)
+	mockRepo.On("Update", mock.MatchedBy(func(sub Subscription) bool {
+		return sub.Email == mockSub.Email && sub.Confirmed
+	})).Return(nil)
+	mockMail.On("SendConfirmSuccessEmail", mock.MatchedBy(func(sub Subscription) bool {
+		return sub.Email == mockSub.Email && sub.Confirmed
+	})).Return()
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 		mailService:            mockMail,
@@ -226,29 +214,31 @@ func TestConfirmSubscription_Success(t *testing.T) {
 
 	err := service.ConfirmSubscription("token123")
 	assert.NoError(t, err)
-	assert.NotNil(t, mockMail.sentConfirmSuccessEmail)
-	assert.Equal(t, "test@example.com", mockMail.sentConfirmSuccessEmail.Email)
-	assert.True(t, mockMail.sentConfirmSuccessEmail.Confirmed)
+	mockRepo.AssertExpectations(t)
+	mockMail.AssertExpectations(t)
 }
 
 func TestConfirmSubscription_TokenNotFound(t *testing.T) {
-	mockRepo := &mockSubscriptionRepository{
-		findByTokenFunc: func(token string) (*Subscription, error) {
-			return nil, errors.New("not found")
-		},
-	}
-	mockMail := &mockMailService{}
+	mockRepo := new(mockSubscriptionRepository)
+	mockMail := new(mockMailService)
+
+	mockRepo.On("FindByToken", "invalid-token").Return(nil, errors.New("not found"))
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 		mailService:            mockMail,
 	}
 
 	err := service.ConfirmSubscription("invalid-token")
+
+	mockMail.AssertNotCalled(t, "SendConfirmSuccessEmail", mock.Anything)
 	assert.Equal(t, ErrTokenNotFound, err)
-	assert.Nil(t, mockMail.sentConfirmSuccessEmail)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestConfirmSubscription_UpdateError(t *testing.T) {
+	mockRepo := new(mockSubscriptionRepository)
+	mockMail := new(mockMailService)
 	mockSub := &Subscription{
 		Email:     "test@example.com",
 		City:      "Kyiv",
@@ -256,25 +246,23 @@ func TestConfirmSubscription_UpdateError(t *testing.T) {
 		Token:     "token123",
 		Confirmed: false,
 	}
-	mockRepo := &mockSubscriptionRepository{
-		findByTokenFunc: func(token string) (*Subscription, error) {
-			return mockSub, nil
-		},
-		updateFunc: func(sub Subscription) error {
-			return errors.New("update error")
-		},
-	}
-	mockMail := &mockMailService{}
+
+	mockRepo.On("FindByToken", "token123").Return(mockSub, nil)
+	mockRepo.On("Update", mock.AnythingOfType("Subscription")).Return(errors.New("update error"))
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 		mailService:            mockMail,
 	}
 
 	err := service.ConfirmSubscription("token123")
+
+	mockMail.AssertNotCalled(t, "SendConfirmSuccessEmail", mock.Anything)
 	assert.Equal(t, ErrFailedToSaveSubscription, err)
-	assert.Nil(t, mockMail.sentConfirmSuccessEmail)
+	mockRepo.AssertExpectations(t)
 }
 func TestUnsubscribe_Success(t *testing.T) {
+	mockRepo := new(mockSubscriptionRepository)
 	mockSub := &Subscription{
 		Email:     "test@example.com",
 		City:      "Kyiv",
@@ -282,53 +270,51 @@ func TestUnsubscribe_Success(t *testing.T) {
 		Token:     "token123",
 		Confirmed: true,
 	}
-	mockRepo := &mockSubscriptionRepository{
-		findByTokenFunc: func(token string) (*Subscription, error) {
-			assert.Equal(t, "token123", token)
-			return mockSub, nil
-		},
-		deleteFunc: func(sub Subscription) error {
-			assert.Equal(t, mockSub.Email, sub.Email)
-			return nil
-		},
-	}
+
+	mockRepo.On("FindByToken", "token123").Return(mockSub, nil)
+	mockRepo.On("Delete", *mockSub).Return(nil)
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 	}
 
 	err := service.Unsubscribe("token123")
 	assert.NoError(t, err)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestUnsubscribe_TokenNotFound(t *testing.T) {
-	mockRepo := &mockSubscriptionRepository{
-		findByTokenFunc: func(token string) (*Subscription, error) {
-			return nil, errors.New("not found")
-		},
-	}
+	mockRepo := new(mockSubscriptionRepository)
+	mockRepo.On("FindByToken", "invalid-token").Return(nil, errors.New("not found"))
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 	}
 
 	err := service.Unsubscribe("invalid-token")
 	assert.Equal(t, ErrTokenNotFound, err)
+
+	mockRepo.AssertNotCalled(t, "Delete", mock.Anything)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestUnsubscribe_SubscriptionNil(t *testing.T) {
-	mockRepo := &mockSubscriptionRepository{
-		findByTokenFunc: func(token string) (*Subscription, error) {
-			return nil, nil
-		},
-	}
+	mockRepo := new(mockSubscriptionRepository)
+	mockRepo.On("FindByToken", "token123").Return(nil, nil)
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 	}
 
 	err := service.Unsubscribe("token123")
 	assert.NoError(t, err)
+
+	mockRepo.AssertNotCalled(t, "Delete", mock.Anything)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestUnsubscribe_DeleteError(t *testing.T) {
+	mockRepo := new(mockSubscriptionRepository)
 	mockSub := &Subscription{
 		Email:     "test@example.com",
 		City:      "Kyiv",
@@ -336,27 +322,22 @@ func TestUnsubscribe_DeleteError(t *testing.T) {
 		Token:     "token123",
 		Confirmed: true,
 	}
-	mockRepo := &mockSubscriptionRepository{
-		findByTokenFunc: func(token string) (*Subscription, error) {
-			return mockSub, nil
-		},
-		deleteFunc: func(sub Subscription) error {
-			return errors.New("delete error")
-		},
-	}
+
+	mockRepo.On("FindByToken", "token123").Return(mockSub, nil)
+	mockRepo.On("Delete", *mockSub).Return(errors.New("delete error"))
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 	}
 
 	err := service.Unsubscribe("token123")
 	assert.Equal(t, ErrInvalidInput, err)
+	mockRepo.AssertExpectations(t)
 }
 func TestEmailSubscribed_ReturnsTrueWhenSubscribed(t *testing.T) {
-	mockRepo := &mockSubscriptionRepository{
-		findByEmailFunc: func(email string) (*Subscription, error) {
-			return &Subscription{Email: email}, nil
-		},
-	}
+	mockRepo := new(mockSubscriptionRepository)
+	mockRepo.On("FindByEmail", "test@example.com").Return(&Subscription{Email: "test@example.com"}, nil)
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 	}
@@ -364,14 +345,13 @@ func TestEmailSubscribed_ReturnsTrueWhenSubscribed(t *testing.T) {
 	subscribed, err := service.emailSubscribed("test@example.com")
 	assert.True(t, subscribed)
 	assert.NoError(t, err)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestEmailSubscribed_ReturnsError(t *testing.T) {
-	mockRepo := &mockSubscriptionRepository{
-		findByEmailFunc: func(email string) (*Subscription, error) {
-			return nil, errors.New("db error")
-		},
-	}
+	mockRepo := new(mockSubscriptionRepository)
+	mockRepo.On("FindByEmail", "test@example.com").Return(nil, errors.New("db error"))
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 	}
@@ -379,37 +359,88 @@ func TestEmailSubscribed_ReturnsError(t *testing.T) {
 	subscribed, err := service.emailSubscribed("test@example.com")
 	assert.False(t, subscribed)
 	assert.EqualError(t, err, "db error")
+	mockRepo.AssertExpectations(t)
 }
 
 func TestGetConfirmedSubscriptionsByFrequency_ReturnsSubscriptions(t *testing.T) {
+	mockRepo := new(mockSubscriptionRepository)
 	expectedSubs := []Subscription{
 		{Email: "a@example.com", City: "Kyiv", Frequency: Frequency("daily"), Confirmed: true},
 		{Email: "b@example.com", City: "Lviv", Frequency: Frequency("daily"), Confirmed: true},
 	}
-	mockRepo := &mockSubscriptionRepository{
-		findByFrequencyAndConfirmationF: func(freq Frequency) ([]Subscription, error) {
-			assert.Equal(t, Frequency("daily"), freq)
-			return expectedSubs, nil
-		},
-	}
+	mockRepo.On("FindByFrequencyAndConfirmation", Frequency("daily")).Return(expectedSubs, nil)
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 	}
 
 	result := service.GetConfirmedSubscriptionsByFrequency(Frequency("daily"))
 	assert.Equal(t, expectedSubs, result)
+	mockRepo.AssertExpectations(t)
 }
 
 func TestGetConfirmedSubscriptionsByFrequency_RepoError_ReturnsEmptySlice(t *testing.T) {
-	mockRepo := &mockSubscriptionRepository{
-		findByFrequencyAndConfirmationF: func(freq Frequency) ([]Subscription, error) {
-			return nil, errors.New("db error")
-		},
-	}
+	mockRepo := new(mockSubscriptionRepository)
+	mockRepo.On("FindByFrequencyAndConfirmation", Frequency("daily")).Return(nil, errors.New("db error"))
+
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
 	}
 
 	result := service.GetConfirmedSubscriptionsByFrequency(Frequency("daily"))
 	assert.Empty(t, result)
+	mockRepo.AssertExpectations(t)
+}
+
+func TestSendSubscriptionEmails_SendsEmails(t *testing.T) {
+	mockRepo := new(mockSubscriptionRepository)
+	mockWeather := new(mockWeatherService)
+	mockMail := new(mockMailService)
+
+	subs := []Subscription{
+		{Email: "test1@example.com", City: "Kyiv", Frequency: Frequency("daily"), Confirmed: true},
+		{Email: "test2@example.com", City: "Lviv", Frequency: Frequency("daily"), Confirmed: true},
+	}
+	mockRepo.On("FindByFrequencyAndConfirmation", Frequency("daily")).Return(subs, nil)
+	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{Temperature: 10}, nil)
+	mockWeather.On("GetWeather", "Lviv").Return(&client.WeatherDTO{Temperature: 20}, nil)
+	mockMail.On("SendWeatherUpdateEmail", subs[0], client.WeatherDTO{Temperature: 10}).Return()
+	mockMail.On("SendWeatherUpdateEmail", subs[1], client.WeatherDTO{Temperature: 20}).Return()
+
+	service := &SubscribeService{
+		subscriptionRepository: mockRepo,
+		weatherService:         mockWeather,
+		mailService:            mockMail,
+	}
+
+	service.SendSubscriptionEmails(Frequency("daily"))
+	mockRepo.AssertExpectations(t)
+	mockWeather.AssertExpectations(t)
+	mockMail.AssertExpectations(t)
+}
+
+func TestSendSubscriptionEmails_WeatherError_SkipsEmail(t *testing.T) {
+	mockRepo := new(mockSubscriptionRepository)
+	mockWeather := new(mockWeatherService)
+	mockMail := new(mockMailService)
+
+	subs := []Subscription{
+		{Email: "a@example.com", City: "Kyiv", Frequency: Frequency("daily"), Confirmed: true},
+	}
+	mockRepo.On("FindByFrequencyAndConfirmation", Frequency("daily")).Return(subs, nil)
+	mockWeather.On("GetWeather", "Kyiv").Return(nil, errors.New("weather error"))
+
+	service := &SubscribeService{
+		subscriptionRepository: mockRepo,
+		weatherService:         mockWeather,
+		mailService:            mockMail,
+	}
+
+	service.SendSubscriptionEmails(Frequency("daily"))
+
+	mockMail.AssertNotCalled(t, "SendWeatherUpdateEmail", mock.Anything, mock.Anything)
+
+	mockRepo.AssertExpectations(t)
+	mockWeather.AssertExpectations(t)
+	mockMail.AssertExpectations(t)
 }

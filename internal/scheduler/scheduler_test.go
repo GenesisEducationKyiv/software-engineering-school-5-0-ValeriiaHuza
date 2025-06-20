@@ -7,29 +7,33 @@ import (
 	"testing"
 
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
-// mockSubscribeService implements subscribeService for testing
+// --- Mocks ---
+
 type mockSubscribeService struct {
-	calls []subscription.Frequency
+	mock.Mock
 }
 
 func (m *mockSubscribeService) SendSubscriptionEmails(freq subscription.Frequency) {
-	m.calls = append(m.calls, freq)
+	m.Called(freq)
 }
 
-func TestStartCronJobs_SchedulesJobs(t *testing.T) {
-	mockService := &mockSubscribeService{}
-	s := NewScheduler(mockService)
+// --- Tests ---
 
-	s.StartCronJobs()
+func TestStartCronJobs_SchedulesJobs(t *testing.T) {
+	mockService := new(mockSubscribeService)
+
+	// Set expectations
+	mockService.On("SendSubscriptionEmails", subscription.FrequencyDaily).Return()
+	mockService.On("SendSubscriptionEmails", subscription.FrequencyHourly).Return()
 
 	mockService.SendSubscriptionEmails(subscription.FrequencyDaily)
 	mockService.SendSubscriptionEmails(subscription.FrequencyHourly)
 
-	assert.Len(t, mockService.calls, 2, "should have 2 calls to SendSubscriptionEmails")
-	assert.Equal(t, subscription.FrequencyDaily, mockService.calls[0], "first call should be FrequencyDaily")
-	assert.Equal(t, subscription.FrequencyHourly, mockService.calls[1], "second call should be FrequencyHourly")
-
+	// Assert expectations
+	mockService.AssertCalled(t, "SendSubscriptionEmails", subscription.FrequencyDaily)
+	mockService.AssertCalled(t, "SendSubscriptionEmails", subscription.FrequencyHourly)
+	mockService.AssertExpectations(t)
 }

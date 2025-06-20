@@ -9,15 +9,22 @@ import (
 
 	"github.com/ValeriiaHuza/weather_api/internal/client"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
+// --- Mocks ---
+
 type mockWeatherAPIClient struct {
-	fetchWeatherFunc func(city string) (*client.WeatherDTO, error)
+	mock.Mock
 }
 
 func (m *mockWeatherAPIClient) FetchWeather(city string) (*client.WeatherDTO, error) {
-	return m.fetchWeatherFunc(city)
+	args := m.Called(city)
+	dto, _ := args.Get(0).(*client.WeatherDTO)
+	return dto, args.Error(1)
 }
+
+// --- Tests ---
 
 func TestGetWeather_Success(t *testing.T) {
 	expected := &client.WeatherDTO{
@@ -25,30 +32,29 @@ func TestGetWeather_Success(t *testing.T) {
 		Humidity:    20.5,
 		Description: "Sunny",
 	}
-	mockClient := &mockWeatherAPIClient{
-		fetchWeatherFunc: func(city string) (*client.WeatherDTO, error) {
-			assert.Equal(t, "Kyiv", city)
-			return expected, nil
-		},
-	}
+
+	mockClient := new(mockWeatherAPIClient)
+	mockClient.On("FetchWeather", "Kyiv").Return(expected, nil)
+
 	service := NewWeatherAPIService(mockClient)
 
 	result, err := service.GetWeather("Kyiv")
 	assert.NoError(t, err)
 	assert.Equal(t, expected, result)
+	mockClient.AssertExpectations(t)
 }
 
 func TestGetWeather_Error(t *testing.T) {
 	mockErr := errors.New("network error")
-	mockClient := &mockWeatherAPIClient{
-		fetchWeatherFunc: func(city string) (*client.WeatherDTO, error) {
-			return nil, mockErr
-		},
-	}
+
+	mockClient := new(mockWeatherAPIClient)
+	mockClient.On("FetchWeather", "London").Return((*client.WeatherDTO)(nil), mockErr)
+
 	service := NewWeatherAPIService(mockClient)
 
 	result, err := service.GetWeather("London")
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	assert.Equal(t, mockErr, err)
+	mockClient.AssertExpectations(t)
 }
