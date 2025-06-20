@@ -46,7 +46,7 @@ func (wc *WeatherController) GetWeather(c *gin.Context) {
 func validateCityQuery(c *gin.Context) (string, error) {
 	city := c.Query("city")
 	if city == "" {
-		return "", ErrInvalidCityInput // you can define this as a custom error
+		return "", ErrInvalidCityInput
 	}
 	return city, nil
 }
