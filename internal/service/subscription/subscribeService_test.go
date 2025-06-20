@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 package subscription
 
 import (
@@ -410,43 +413,3 @@ func TestGetConfirmedSubscriptionsByFrequency_RepoError_ReturnsEmptySlice(t *tes
 	result := service.GetConfirmedSubscriptionsByFrequency(Frequency("daily"))
 	assert.Empty(t, result)
 }
-
-// func TestSendSubscriptionEmails_Success(t *testing.T) {
-// 	mockSubs := []Subscription{
-// 		{Email: "one@example.com", City: "Kyiv", Frequency: "daily", Confirmed: true},
-// 		{Email: "two@example.com", City: "Lviv", Frequency: "daily", Confirmed: true},
-// 	}
-
-// 	weatherCallCount := 0
-// 	emailCallCount := 0
-
-// 	mockWeather := &mockWeatherService{
-// 		getWeatherFunc: func(city string) (*client.WeatherDTO, error) {
-// 			weatherCallCount++
-// 			return &client.WeatherDTO{Temperature: 17, Humidity: 20, Description: "Sunny"}, nil
-// 		},
-// 	}
-
-// 	mockMail := &mockMailService{}
-
-// 	mockMail.SendWeatherUpdateEmail = func(sub Subscription, weather client.WeatherDTO) {
-// 		emailCallCount++
-// 	}
-
-// 	mockRepo := &mockSubscriptionRepository{
-// 		findByFrequencyAndConfirmationF: func(freq Frequency) ([]Subscription, error) {
-// 			return mockSubs, nil
-// 		},
-// 	}
-
-// 	service := &SubscribeService{
-// 		weatherService:         mockWeather,
-// 		mailService:            mockMail,
-// 		subscriptionRepository: mockRepo,
-// 	}
-
-// 	service.SendSubscriptionEmails("daily")
-
-// 	assert.Equal(t, 2, weatherCallCount, "Expected 2 weather calls")
-// 	assert.Equal(t, 2, emailCallCount, "Expected 2 email sends")
-// }
