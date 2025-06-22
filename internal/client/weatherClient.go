@@ -7,16 +7,19 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 )
 
 type WeatherAPIClient struct {
 	apiKey string
+	apiUrl string
 	client *http.Client
 }
 
-func NewWeatherAPIClient(apiKey string, http *http.Client) *WeatherAPIClient {
+func NewWeatherAPIClient(apiKey string, apiUrl string, http *http.Client) *WeatherAPIClient {
 	return &WeatherAPIClient{
 		apiKey: apiKey,
+		apiUrl: apiUrl,
 		client: http,
 	}
 }
@@ -24,7 +27,7 @@ func NewWeatherAPIClient(apiKey string, http *http.Client) *WeatherAPIClient {
 func (c *WeatherAPIClient) FetchWeather(city string) (*WeatherDTO, error) {
 	city = url.QueryEscape(city)
 
-	weatherUrl := fmt.Sprintf("https://api.weatherapi.com/v1/current.json?key=%v&q=%v", c.apiKey, city)
+	weatherUrl := fmt.Sprintf("%s/current.json?key=%s&q=%s", strings.TrimRight(c.apiUrl, "/"), c.apiKey, city)
 
 	resp, err := c.client.Get(weatherUrl)
 

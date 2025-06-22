@@ -20,21 +20,21 @@ import (
 )
 
 func Run() error {
-	config.LoadEnvVariables()
+	config, err := config.LoadEnvVariables()
 
-	db := initDatabase()
+	if err != nil {
+		return err
+	}
+
+	db := db.ConnectToDatabase(*config)
 	router := setupRouter()
 
-	services := initServices(db)
+	services := initServices(*config, db)
 
 	initRoutes(router, services)
 	startBackgroundJobs(services.subscribeService)
 
-	return startServer(router)
-}
-
-func initDatabase() *gorm.DB {
-	return db.ConnectToDatabase()
+	return startServer(*config, router)
 }
 
 func setupRouter() *gin.Engine {
@@ -63,24 +63,24 @@ func startBackgroundJobs(subscribeService subscription.SubscribeService) {
 	schedulerService.StartCronJobs()
 }
 
-func startServer(router *gin.Engine) error {
-	port := strconv.Itoa(config.AppConfig.AppPort)
+func startServer(config config.Config, router *gin.Engine) error {
+	port := strconv.Itoa(config.AppPort)
 
 	return router.Run(":" + port)
 }
 
-func initServices(database *gorm.DB) *Services {
+func initServices(config config.Config, database *gorm.DB) *Services {
 
 	http := httpclient.InitHtttClient()
 
-	weatherClient := client.NewWeatherAPIClient(config.AppConfig.WeatherAPIKey, &http)
+	weatherClient := client.NewWeatherAPIClient(config.WeatherAPIKey, config.WeatherAPIUrl, &http)
 	weatherService := weather.NewWeatherAPIService(weatherClient)
 
 	subscribeRepo := repository.NewSubscriptionRepository(database)
-	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.AppConfig.AppURL)
+	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.AppURL)
 
-	mailEmail := config.AppConfig.MailEmail
-	dialer := gomail.NewDialer("smtp.gmail.com", 587, mailEmail, config.AppConfig.MailPassword)
+	mailEmail := config.MailEmail
+	dialer := gomail.NewDialer("smtp.gmail.com", 587, mailEmail, config.MailPassword)
 	mailerService := mailer.NewMailerService(mailEmail, dialer, emailBuilder)
 
 	subscribeService := subscription.NewSubscribeService(weatherService, mailerService, subscribeRepo)

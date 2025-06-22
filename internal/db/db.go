@@ -9,13 +9,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func ConnectToDatabase() *gorm.DB {
+func ConnectToDatabase(config config.Config) *gorm.DB {
 
-	host := config.AppConfig.DBHost
-	port := config.AppConfig.DBPort
-	user := config.AppConfig.DBUsername
-	password := config.AppConfig.DBPassword
-	dbName := config.AppConfig.DBName
+	host := config.DBHost
+	port := config.DBPort
+	user := config.DBUsername
+	password := config.DBPassword
+	dbName := config.DBName
 
 	dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v sslmode=disable", host, user, password, dbName, port)
 

@@ -1,69 +1,53 @@
 package config
 
 import (
+	"fmt"
 	"log"
-	"os"
-	"strconv"
 
 	"github.com/joho/godotenv"
+	"github.com/kelseyhightower/envconfig"
 )
 
 type Config struct {
-	AppURL        string
-	AppPort       int
-	DBHost        string
-	DBHostPort    int
-	DBPort        int
-	DBUsername    string
-	DBPassword    string
-	DBName        string
-	WeatherAPIKey string
-	MailEmail     string
-	MailPassword  string
+	AppURL        string `envconfig:"APP_URL" required:"true"`
+	AppPort       int    `envconfig:"APP_PORT" required:"true"`
+	DBHost        string `envconfig:"DB_HOST" required:"true"`
+	DBHostPort    int    `envconfig:"DB_HOST_PORT" required:"true"`
+	DBPort        int    `envconfig:"DB_PORT" required:"true"`
+	DBUsername    string `envconfig:"DB_USERNAME" required:"true"`
+	DBPassword    string `envconfig:"DB_PASSWORD" required:"true"`
+	DBName        string `envconfig:"DB_NAME" required:"true"`
+	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
+	WeatherAPIUrl string `envconfig:"WEATHER_API_URL" required:"true"`
+	MailEmail     string `envconfig:"MAIL_EMAIL" required:"true"`
+	MailPassword  string `envconfig:"MAIL_PASSWORD" required:"true"`
 }
 
-var AppConfig *Config
+func LoadEnvVariables() (*Config, error) {
 
-func LoadEnvVariables() {
 	err := godotenv.Load()
+	if err != nil {
+		log.Printf("No .env file found or error loading it: %v", err)
+	}
+
+	var AppConfig Config
+
+	err = envconfig.Process("", &AppConfig)
+	if err != nil {
+		log.Fatalf("error processing environment variables: %v", err)
+		return nil, fmt.Errorf("error processing environment variables: %v", err)
+	}
+
+	err = AppConfig.validate()
 
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		return nil, fmt.Errorf("validation error: %v", err)
 	}
 
-	appPort, err := strconv.Atoi(os.Getenv("APP_PORT"))
-	if err != nil {
-		log.Fatalf("Invalid APP_PORT: %v", err)
-	}
-
-	dbHostPort, err := strconv.Atoi(os.Getenv("DB_HOST_PORT"))
-	if err != nil {
-		log.Fatalf("Invalid DB_HOST_PORT: %v", err)
-	}
-
-	dbPort, err := strconv.Atoi(os.Getenv("DB_PORT"))
-	if err != nil {
-		log.Fatalf("Invalid DB_PORT: %v", err)
-	}
-
-	AppConfig = &Config{
-		AppURL:        os.Getenv("APP_URL"),
-		AppPort:       appPort,
-		DBHost:        os.Getenv("DB_HOST"),
-		DBHostPort:    dbHostPort,
-		DBPort:        dbPort,
-		DBUsername:    os.Getenv("DB_USERNAME"),
-		DBPassword:    os.Getenv("DB_PASSWORD"),
-		DBName:        os.Getenv("DB_NAME"),
-		WeatherAPIKey: os.Getenv("WEATHER_API_KEY"),
-		MailEmail:     os.Getenv("MAIL_EMAIL"),
-		MailPassword:  os.Getenv("MAIL_PASSWORD"),
-	}
-
-	AppConfig.validate()
+	return &AppConfig, nil
 }
 
-func (c *Config) validate() {
+func (c *Config) validate() error {
 	errors := []string{}
 
 	if c.AppPort == 0 {
@@ -98,6 +82,9 @@ func (c *Config) validate() {
 	if c.WeatherAPIKey == "" {
 		errors = append(errors, "WEATHER_API_KEY is required")
 	}
+	if c.WeatherAPIUrl == "" {
+		errors = append(errors, "WEATHER_API_URL is required")
+	}
 	if c.MailEmail == "" {
 		errors = append(errors, "MAIL_EMAIL is required")
 	}
@@ -106,6 +93,8 @@ func (c *Config) validate() {
 	}
 
 	if len(errors) > 0 {
-		log.Fatalf("Missing required environment variables: %v", errors)
+		return fmt.Errorf("missing required environment variables: %v", errors)
 	}
+
+	return nil
 }
