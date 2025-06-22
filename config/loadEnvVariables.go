@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
@@ -27,21 +26,19 @@ func LoadEnvVariables() (*Config, error) {
 
 	err := godotenv.Load()
 	if err != nil {
-		log.Printf("No .env file found or error loading it: %v", err)
+		return nil, fmt.Errorf("no .env file found or error loading it: %w", err)
 	}
 
 	var AppConfig Config
 
 	err = envconfig.Process("", &AppConfig)
 	if err != nil {
-		log.Fatalf("error processing environment variables: %v", err)
-		return nil, fmt.Errorf("error processing environment variables: %v", err)
+		return nil, fmt.Errorf("error processing environment variables: %w", err)
 	}
 
 	err = AppConfig.validate()
-
 	if err != nil {
-		return nil, fmt.Errorf("validation error: %v", err)
+		return nil, fmt.Errorf("validation error: %w", err)
 	}
 
 	return &AppConfig, nil
