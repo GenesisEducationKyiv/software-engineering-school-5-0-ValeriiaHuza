@@ -1,6 +1,7 @@
 package app
 
 import (
+	"log"
 	"strconv"
 
 	"github.com/ValeriiaHuza/weather_api/config"
@@ -27,6 +28,18 @@ func Run() error {
 	}
 
 	db := db.ConnectToDatabase(*config)
+
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("Failed to get sql.DB from gorm.DB: %v", err)
+	}
+
+	defer func() {
+		if err := sqlDB.Close(); err != nil {
+			log.Printf("Error closing database: %v", err)
+		}
+	}()
+
 	router := setupRouter()
 
 	services := initServices(*config, db)
