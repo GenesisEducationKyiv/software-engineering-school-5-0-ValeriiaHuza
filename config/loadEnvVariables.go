@@ -95,3 +95,14 @@ func (c *Config) validate() error {
 
 	return nil
 }
+
+func (c *Config) GetDSNString() string {
+	host := c.DBHost
+	port := c.DBPort
+	user := c.DBUsername
+	password := c.DBPassword
+	dbName := c.DBName
+
+	dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v sslmode=disable", host, user, password, dbName, port)
+	return dsn
+}

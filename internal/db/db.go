@@ -1,7 +1,6 @@
 package db
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/ValeriiaHuza/weather_api/config"
@@ -11,13 +10,7 @@ import (
 
 func ConnectToDatabase(config config.Config) *gorm.DB {
 
-	host := config.DBHost
-	port := config.DBPort
-	user := config.DBUsername
-	password := config.DBPassword
-	dbName := config.DBName
-
-	dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v sslmode=disable", host, user, password, dbName, port)
+	dsn := config.GetDSNString()
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
