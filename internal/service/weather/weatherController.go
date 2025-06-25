@@ -33,10 +33,13 @@ func (wc *WeatherController) GetWeather(c *gin.Context) {
 		switch {
 		case errors.Is(err, client.ErrCityNotFound):
 			c.String(http.StatusNotFound, err.Error())
+			return
 		case errors.Is(err, client.ErrInvalidRequest):
 			c.String(http.StatusBadRequest, err.Error())
+			return
 		default:
 			c.String(http.StatusBadRequest, "Bad request")
+			return
 		}
 	}
 
