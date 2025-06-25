@@ -1,4 +1,4 @@
-package test
+package integration
 
 import (
 	"context"
@@ -35,7 +35,8 @@ func SetupPostgresContainer(t *testing.T) (db *gorm.DB, terminate func()) {
 	host, err := postgresContainer.Host(ctx)
 	assert.NoError(t, err)
 
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port.Port(), dbUser, dbPassword, dbName)
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+		host, port.Port(), dbUser, dbPassword, dbName)
 	// Wait for DB to be ready
 	var gormDB *gorm.DB
 	for i := 0; i < 10; i++ {

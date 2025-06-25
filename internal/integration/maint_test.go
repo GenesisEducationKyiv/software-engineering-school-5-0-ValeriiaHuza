@@ -1,4 +1,4 @@
-package test
+package integration
 
 import (
 	"net/http"
@@ -19,10 +19,10 @@ func setupRouter() *gin.Engine {
 		switch city {
 		case "Nowhere":
 			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":{"code":1006,"message":"No matching location found."}}`))
+			_, _ = w.Write([]byte(`{"error":{"code":1006,"message":"No matching location found."}}`))
 		default:
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{
+			_, _ = w.Write([]byte(`{
 				"current": {
 					"temp_c": 21.5,
 					"humidity": 55,
