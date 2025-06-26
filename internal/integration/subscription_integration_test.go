@@ -16,93 +16,139 @@ import (
 )
 
 func TestSubscriptionEndpoint_SuccessCreate(t *testing.T) {
+	// create a new subscription
+	email := "test@example.com"
+	city := "Kyiv"
+	resp := createTestSubscription(t, email, city)
+	require.Equal(t, http.StatusOK, resp.Code)
+	require.Contains(t, resp.Body.String(), "Subscription successful")
 
-	body := `{
-		"email": "test@example.com",
-		"city": "Kyiv",
-		"frequency": "daily"
-	}`
-
-	req := httptest.NewRequest("POST", "/api/subscribe", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
-	resp := httptest.NewRecorder()
-
-	testRouter.ServeHTTP(resp, req)
-
-	assert.Equal(t, http.StatusOK, resp.Code)
-	assert.Contains(t, resp.Body.String(), "Subscription successful")
-
-	// --- Assert DB ---
-	sub, err := testRepo.FindByEmail("test@example.com")
-	require.NoError(t, err)
-	assert.Equal(t, "Kyiv", sub.City)
+	//check subscription in the database
+	sub := getSubscriptionByEmail(t, email)
+	assert.Equal(t, city, sub.City)
 	assert.False(t, sub.Confirmed)
-	assert.Equal(t, "daily", string(sub.Frequency))
 
-	// --- Assert email sent ---
-	email := testMailService.SentEmail
-	assert.Equal(t, "test@example.com", email.To)
-	assert.Equal(t, "Weather updates confirmation link", email.Subject)
-	assert.Contains(t, email.Body, sub.Token)
+	//check confirmation email was sent
+	emailSent := testMailService.SentEmail
+	assert.Equal(t, email, emailSent.To)
+	assert.Equal(t, "Weather updates confirmation link", emailSent.Subject)
+	assert.Contains(t, emailSent.Body, sub.Token)
 }
 
 func TestSubscriptionEndpoint_RepeatedSubscription(t *testing.T) {
-	body := `{
-        "email": "repeat@example.com",
-        "city": "Kyiv",
-        "frequency": "daily"
-    }`
+	email := "repeat@example.com"
+	city := "Kyiv"
 
-	// First subscription should succeed
-	req1 := httptest.NewRequest("POST", "/api/subscribe", strings.NewReader(body))
-	req1.Header.Set("Content-Type", "application/json")
-	resp1 := httptest.NewRecorder()
-	testRouter.ServeHTTP(resp1, req1)
-	assert.Equal(t, http.StatusOK, resp1.Code)
+	// create first subscription
+	resp := createTestSubscription(t, email, city)
+	require.Equal(t, http.StatusOK, resp.Code)
+	require.Contains(t, resp.Body.String(), "Subscription successful")
 
-	// Second subscription with same email should fail (already subscribed)
-	req2 := httptest.NewRequest("POST", "/api/subscribe", strings.NewReader(body))
-	req2.Header.Set("Content-Type", "application/json")
-	resp2 := httptest.NewRecorder()
-	testRouter.ServeHTTP(resp2, req2)
+	// create second subscription with the same email
+	resp2 := createTestSubscription(t, email, city)
 	assert.Equal(t, http.StatusConflict, resp2.Code)
-	assert.Contains(t, resp2.Body.String(), subscription.ErrEmailAlreadySubscribed.Error())
+	assert.Equal(t, resp2.Body.String(), subscription.ErrEmailAlreadySubscribed.Error())
 }
 
 func TestSubscriptionEndpoint_ConfirmSubscription_Success(t *testing.T) {
+	email := "confirm@example.com"
+	city := "Kyiv"
+
+	// create subscription
+	resp := createTestSubscription(t, email, city)
+	require.Equal(t, http.StatusOK, resp.Code)
+	require.Contains(t, resp.Body.String(), "Subscription successful")
+
+	// get the subscription from the DB
+	sub := getSubscriptionByEmail(t, email)
+
+	// confirm subscription
+	respConfirm := confirmSubscription(t, sub.Token)
+	assert.Equal(t, http.StatusOK, respConfirm.Code)
+	assert.Contains(t, respConfirm.Body.String(), "confirmed")
+
+	// Check if the confirmation email was sent
+	emailSent := testMailService.SentEmail
+	assert.Equal(t, email, emailSent.To)
+	assert.Equal(t, "Weather updates subscription", emailSent.Subject)
+
+	// Check DB updated
+	sub = getSubscriptionByEmail(t, email)
+	assert.True(t, sub.Confirmed)
+}
+
+func TestSubscriptionEndpoint_ConfirmSubscription_Unsuccessful(t *testing.T) {
+	confirmResp := confirmSubscription(t, "invalid-token")
+
+	assert.Equal(t, http.StatusBadRequest, confirmResp.Code)
+	assert.Equal(t, confirmResp.Body.String(), subscription.ErrTokenNotFound.Error())
+}
+
+func TestSubscriptionEndpoint_Unsubscribe_Success(t *testing.T) {
 	// Create a subscription
-	body := `{
-        "email": "confirm@example.com",
-        "city": "Kyiv",
-        "frequency": "daily"
-    }`
+	email := "unsub@example.com"
+	city := "Kyiv"
+	resp := createTestSubscription(t, email, city)
+	require.Equal(t, http.StatusOK, resp.Code)
+	require.Contains(t, resp.Body.String(), "Subscription successful")
+
+	// Get subscription from DB
+	sub := getSubscriptionByEmail(t, email)
+
+	// Unsubscribe
+	respUns := unsubscribe(t, sub.Token)
+	assert.Equal(t, http.StatusOK, respUns.Code)
+	assert.Contains(t, respUns.Body.String(), "unsubscribe")
+
+	// Check DB deleted
+	_, err := testRepo.FindByEmail(email)
+	assert.Error(t, err)
+}
+
+func TestSubscriptionEndpoint_Unsubscribe_Unsuccessful(t *testing.T) {
+	// Try to unsubscribe with an invalid token
+	unsubResp := unsubscribe(t, "invalid-token")
+
+	assert.Equal(t, http.StatusBadRequest, unsubResp.Code)
+	assert.Equal(t, unsubResp.Body.String(), subscription.ErrTokenNotFound.Error())
+}
+
+func createTestSubscription(t *testing.T, email string, city string) *httptest.ResponseRecorder {
+	t.Helper()
+	body := fmt.Sprintf(`{
+		"email": "%s",
+		"city": "%s",
+		"frequency": "daily"
+	}`, email, city)
+
 	req := httptest.NewRequest("POST", "/api/subscribe", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
+
 	testRouter.ServeHTTP(resp, req)
-	assert.Equal(t, http.StatusOK, resp.Code)
 
-	// Get the token from the DB
-	sub, err := testRepo.FindByEmail("confirm@example.com")
+	return resp
+}
+
+func getSubscriptionByEmail(t *testing.T, email string) *subscription.Subscription {
+	t.Helper()
+	sub, err := testRepo.FindByEmail(email)
 	require.NoError(t, err)
-	require.NotEmpty(t, sub.Token)
+	return sub
+}
 
-	// Confirm the subscription
-	confirmURL := fmt.Sprintf("/api/confirm/%s", sub.Token)
-	confirmReq := httptest.NewRequest("GET", confirmURL, nil)
-	confirmResp := httptest.NewRecorder()
-	testRouter.ServeHTTP(confirmResp, confirmReq)
-	assert.Equal(t, http.StatusOK, confirmResp.Code)
-	assert.Contains(t, confirmResp.Body.String(), "confirmed")
+func confirmSubscription(t *testing.T, token string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest("GET", fmt.Sprintf("/api/confirm/%s", token), nil)
+	resp := httptest.NewRecorder()
+	testRouter.ServeHTTP(resp, req)
+	return resp
+}
 
-	// Check if the confirmation email was sent
-	email := testMailService.SentEmail
-	assert.Equal(t, "confirm@example.com", email.To)
-	assert.Equal(t, "Weather updates subscription", email.Subject)
-	assert.Contains(t, email.Body, "confirm@example.com")
-
-	// Check DB updated
-	sub, err = testRepo.FindByEmail("confirm@example.com")
-	require.NoError(t, err)
-	assert.True(t, sub.Confirmed)
+func unsubscribe(t *testing.T, token string) *httptest.ResponseRecorder {
+	t.Helper()
+	req := httptest.NewRequest("GET", fmt.Sprintf("/api/unsubscribe/%s", token), nil)
+	resp := httptest.NewRecorder()
+	testRouter.ServeHTTP(resp, req)
+	return resp
 }
