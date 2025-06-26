@@ -78,7 +78,7 @@ func TestSubscribeForWeatherUpdates_Success(t *testing.T) {
 	mockRepo := new(mockSubscriptionRepository)
 
 	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{}, nil)
-	mockRepo.On("FindByEmail", "test@example.com").Return(nil, nil)
+	mockRepo.On("FindByEmail", "test@example.com").Return(nil, mock.Error(nil))
 	mockRepo.On("Create", mock.AnythingOfType("Subscription")).Return(nil)
 	mockMail.On("SendConfirmationEmail", mock.AnythingOfType("Subscription")).Return()
 
@@ -342,9 +342,9 @@ func TestEmailSubscribed_ReturnsTrueWhenSubscribed(t *testing.T) {
 		subscriptionRepository: mockRepo,
 	}
 
-	subscribed, err := service.emailSubscribed("test@example.com")
+	subscribed := service.emailSubscribed("test@example.com")
 	assert.True(t, subscribed)
-	assert.NoError(t, err)
+
 	mockRepo.AssertExpectations(t)
 }
 
@@ -356,9 +356,9 @@ func TestEmailSubscribed_ReturnsError(t *testing.T) {
 		subscriptionRepository: mockRepo,
 	}
 
-	subscribed, err := service.emailSubscribed("test@example.com")
+	subscribed := service.emailSubscribed("test@example.com")
 	assert.False(t, subscribed)
-	assert.EqualError(t, err, "db error")
+
 	mockRepo.AssertExpectations(t)
 }
 
