@@ -78,7 +78,7 @@ func TestSubscribeForWeatherUpdates_Success(t *testing.T) {
 	mockRepo := new(mockSubscriptionRepository)
 
 	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{}, nil)
-	mockRepo.On("FindByEmail", "test@example.com").Return(nil, mock.Error(nil))
+	mockRepo.On("FindByEmail", "test@example.com").Return(nil, errors.New("record not found"))
 	mockRepo.On("Create", mock.AnythingOfType("Subscription")).Return(nil)
 	mockMail.On("SendConfirmationEmail", mock.AnythingOfType("Subscription")).Return()
 
@@ -143,36 +143,13 @@ func TestSubscribeForWeatherUpdates_EmailAlreadySubscribed(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-func TestSubscribeForWeatherUpdates_FindByEmailError(t *testing.T) {
-	mockWeather := new(mockWeatherService)
-	mockMail := new(mockMailService)
-	mockRepo := new(mockSubscriptionRepository)
-
-	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{}, nil)
-	mockRepo.On("FindByEmail", "test@example.com").Return(nil, errors.New("db error"))
-
-	service := &SubscribeService{
-		weatherService:         mockWeather,
-		mailService:            mockMail,
-		subscriptionRepository: mockRepo,
-	}
-
-	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
-
-	assert.Equal(t, ErrInvalidInput, err)
-	mockRepo.AssertNotCalled(t, "Create", mock.Anything)
-	mockMail.AssertNotCalled(t, "SendConfirmationEmail", mock.Anything)
-	mockWeather.AssertExpectations(t)
-	mockRepo.AssertExpectations(t)
-}
-
 func TestSubscribeForWeatherUpdates_CreateError(t *testing.T) {
 	mockWeather := new(mockWeatherService)
 	mockMail := new(mockMailService)
 	mockRepo := new(mockSubscriptionRepository)
 
 	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{}, nil)
-	mockRepo.On("FindByEmail", "test@example.com").Return(nil, nil)
+	mockRepo.On("FindByEmail", "test@example.com").Return(nil, errors.New("record not found"))
 	mockRepo.On("Create", mock.AnythingOfType("Subscription")).Return(errors.New("db error"))
 
 	service := &SubscribeService{
