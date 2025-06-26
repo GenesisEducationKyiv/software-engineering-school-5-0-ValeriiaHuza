@@ -3,16 +3,14 @@ package integration
 import (
 	"context"
 	"fmt"
-	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	gormpostgres "gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func SetupPostgresContainer(t *testing.T) (db *gorm.DB, terminate func()) {
+func SetupPostgresContainer() (*gorm.DB, func(), error) {
 	ctx := context.Background()
 
 	dbName := "users"
@@ -27,16 +25,23 @@ func SetupPostgresContainer(t *testing.T) (db *gorm.DB, terminate func()) {
 		postgres.BasicWaitStrategies(),
 	)
 
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to start postgres container: %w", err)
+	}
 
 	port, err := postgresContainer.MappedPort(ctx, "5432")
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to map port: %w", err)
+	}
 
 	host, err := postgresContainer.Host(ctx)
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get host: %w", err)
+	}
 
 	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		host, port.Port(), dbUser, dbPassword, dbName)
+
 	// Wait for DB to be ready
 	var gormDB *gorm.DB
 	for i := 0; i < 10; i++ {
@@ -46,11 +51,14 @@ func SetupPostgresContainer(t *testing.T) (db *gorm.DB, terminate func()) {
 		}
 		time.Sleep(time.Second)
 	}
-	assert.NoError(t, err)
 
-	terminate = func() {
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to connect to DB: %w", err)
+	}
+
+	terminate := func() {
 		_ = postgresContainer.Terminate(ctx)
 	}
 
-	return gormDB, terminate
+	return gormDB, terminate, nil
 }

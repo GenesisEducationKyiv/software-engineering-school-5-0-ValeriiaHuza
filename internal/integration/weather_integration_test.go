@@ -28,7 +28,7 @@ func TestWeatherEndpoint_Scenarios(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("GET", fmt.Sprintf("/weather?city=%s", tt.cityQuery), nil)
+			req := httptest.NewRequest("GET", fmt.Sprintf("/api/weather?city=%s", tt.cityQuery), nil)
 			resp := httptest.NewRecorder()
 
 			testRouter.ServeHTTP(resp, req)
