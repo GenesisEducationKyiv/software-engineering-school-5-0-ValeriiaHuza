@@ -40,7 +40,8 @@ func (c *WeatherAPIClient) FetchWeather(city string) (*client.WeatherDTO, error)
 		return nil, err
 	}
 
-	openWeatherUrl := fmt.Sprintf("%s/data/2.5/weather?lat=%f&lon=%f&appid=%s&units=metric", c.apiUrl, coord.Lat, coord.Lon, c.apiKey)
+	openWeatherUrl := fmt.Sprintf("%s/data/2.5/weather?lat=%f&lon=%f&appid=%s&units=metric",
+		c.apiUrl, coord.Lat, coord.Lon, c.apiKey)
 
 	log.Printf("Sending request to OpenWeather API: %s", openWeatherUrl)
 
