@@ -17,12 +17,20 @@ import (
 	"github.com/ValeriiaHuza/weather_api/internal/scheduler"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
 	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
+	"github.com/ValeriiaHuza/weather_api/logger"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
 
 func Run() error {
+
+	err := logger.InitLoggerFile("app.log")
+	if err != nil {
+		log.Fatalf("Failed to init logger: %v", err)
+	}
+	defer logger.CloseLogFile()
+
 	config, err := config.LoadEnvVariables()
 
 	if err != nil {
