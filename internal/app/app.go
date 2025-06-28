@@ -37,11 +37,16 @@ func Run() error {
 		return err
 	}
 
-	db := db.ConnectToDatabase(*config)
+	db, err := db.ConnectToDatabase(*config)
+
+	if err != nil {
+		return err
+	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		log.Fatalf("Failed to get sql.DB from gorm.DB: %v", err)
+		log.Printf("Failed to get sql.DB from gorm.DB: %v", err)
+		return err
 	}
 
 	defer func() {
