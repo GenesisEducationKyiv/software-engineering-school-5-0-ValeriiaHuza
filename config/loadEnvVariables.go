@@ -18,8 +18,11 @@ type Config struct {
 	DBName        string `envconfig:"DB_NAME" required:"true"`
 	WeatherAPIKey string `envconfig:"WEATHER_API_KEY" required:"true"`
 	WeatherAPIUrl string `envconfig:"WEATHER_API_URL" required:"true"`
-	MailEmail     string `envconfig:"MAIL_EMAIL" required:"true"`
-	MailPassword  string `envconfig:"MAIL_PASSWORD" required:"true"`
+
+	OpenWeatherKey string `envconfig:"OPEN_WEATHER_API_KEY" required:"true"`
+	OpenWeatherUrl string `envconfig:"OPEN_WEATHER_API_URL" required:"true"`
+	MailEmail      string `envconfig:"MAIL_EMAIL" required:"true"`
+	MailPassword   string `envconfig:"MAIL_PASSWORD" required:"true"`
 }
 
 func LoadEnvVariables() (*Config, error) {
@@ -82,6 +85,14 @@ func (c *Config) validate() error {
 	if c.WeatherAPIUrl == "" {
 		errors = append(errors, "WEATHER_API_URL is required")
 	}
+
+	if c.OpenWeatherKey == "" {
+		errors = append(errors, "OPEN_WEATHER_API_KEY is required")
+	}
+	if c.OpenWeatherUrl == "" {
+		errors = append(errors, "OPEN_WEATHER_API_URL is required")
+	}
+
 	if c.MailEmail == "" {
 		errors = append(errors, "MAIL_EMAIL is required")
 	}

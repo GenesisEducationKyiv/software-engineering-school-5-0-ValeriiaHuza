@@ -6,6 +6,8 @@ import (
 
 	"github.com/ValeriiaHuza/weather_api/config"
 	"github.com/ValeriiaHuza/weather_api/internal/client"
+	openweather "github.com/ValeriiaHuza/weather_api/internal/client/openWeather"
+	weatherapi "github.com/ValeriiaHuza/weather_api/internal/client/weatherApi"
 	"github.com/ValeriiaHuza/weather_api/internal/db"
 	"github.com/ValeriiaHuza/weather_api/internal/emailBuilder"
 	"github.com/ValeriiaHuza/weather_api/internal/httpclient"
@@ -84,10 +86,9 @@ func startServer(config config.Config, router *gin.Engine) error {
 
 func initServices(config config.Config, database *gorm.DB) *Services {
 
-	http := httpclient.InitHtttClient()
+	weatherApiChain := buildWeatherResponsibilityChain(config)
 
-	weatherClient := client.NewWeatherAPIClient(config.WeatherAPIKey, config.WeatherAPIUrl, &http)
-	weatherService := weather.NewWeatherAPIService(weatherClient)
+	weatherService := weather.NewWeatherAPIService(weatherApiChain)
 
 	subscribeRepo := repository.NewSubscriptionRepository(database)
 	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.AppURL)
@@ -102,6 +103,22 @@ func initServices(config config.Config, database *gorm.DB) *Services {
 		weatherService:   *weatherService,
 		subscribeService: *subscribeService,
 	}
+}
+
+func buildWeatherResponsibilityChain(config config.Config) *client.WeatherChain {
+	http := httpclient.InitHtttClient()
+
+	geocoding := openweather.NewGeocodingClient(config.OpenWeatherKey, config.OpenWeatherUrl, &http)
+
+	weatherApiClient := weatherapi.NewWeatherAPIClient(config.WeatherAPIKey, config.WeatherAPIUrl, &http)
+	openWeatherClient := openweather.NewWeatherAPIClient(config.OpenWeatherKey, config.OpenWeatherUrl, geocoding, &http)
+
+	weatherApiChain := client.NewWeatherChain(weatherApiClient)
+	openWeatherChain := client.NewWeatherChain(openWeatherClient)
+
+	weatherApiChain.SetNext(openWeatherChain)
+
+	return weatherApiChain
 }
 
 type Services struct {
