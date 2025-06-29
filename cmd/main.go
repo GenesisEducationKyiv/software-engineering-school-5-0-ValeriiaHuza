@@ -7,6 +7,8 @@ import (
 )
 
 func main() {
+
+	log.Fatalf("Error")
 	log.Println("Starting Weather API...")
 	if err := app.Run(); err != nil {
 		log.Fatalf("App terminated with error: %v", err)

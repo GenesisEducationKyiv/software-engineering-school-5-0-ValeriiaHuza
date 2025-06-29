@@ -1,3 +1,5 @@
+version: "2"
+
 linters:
   disable-all: true  
   enable:
@@ -20,4 +22,26 @@ linters:
     - lll              # Checks for long lines (Line Length Linter) to maintain readability across editors.
     - errcheck         # Ensures errors returned from functions are checked and not silently ignored.
     - errorlint        # Ensures idiomatic and consistent error handling practices (e.g., avoid string comparison of errors).
+    - forbidigo        # Flags usage of forbidden identifiers (e.g., fmt.Print, log.Fatal)
+    - sqlclosecheck
   fast: false
+
+  settings:
+   forbidigo:
+    forbid:
+        # Built-in bootstrapping functions.
+      - pattern: ^print(ln)?$
+        # Optional message that gets included in error reports.
+      - pattern: ^fmt\.Print.*$
+        msg: Do not commit print statements.
+        # Alternatively, put messages at the end of the regex, surrounded by `(# )?`.
+        # Escape any special characters. Those messages get included in error reports.
+      - pattern: 'fmt\.Print.*(# Do not commit print statements\.)?'
+        # Forbid spew Dump, whether it is called as function or method.
+        # Depends on analyze-types below.
+      - pattern: ^spew\.(ConfigState\.)?Dump$
+        # The package name might be ambiguous.
+        # The full import path can be used as additional criteria.
+        # Depends on analyze-types below.
+      - pattern: ^v1.Dump$
+        pkg: ^example.com/pkg/api/v1$
