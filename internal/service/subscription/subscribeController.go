@@ -34,7 +34,7 @@ func (sc *SubscribeController) SubscribeForWeatherUpdates(c *gin.Context) {
 	err := c.ShouldBindJSON(&body)
 
 	if err != nil {
-		c.String(http.StatusBadRequest, "Invalid input")
+		c.String(http.StatusBadRequest, "invalid input")
 		return
 	}
 
@@ -47,7 +47,7 @@ func (sc *SubscribeController) SubscribeForWeatherUpdates(c *gin.Context) {
 	errRes := sc.service.SubscribeForWeatherUpdates(body.Email, body.City, frequency)
 
 	if errRes != nil {
-		HandleError(c, err)
+		HandleError(c, errRes)
 		return
 	}
 

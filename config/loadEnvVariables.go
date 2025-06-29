@@ -11,7 +11,6 @@ type Config struct {
 	AppURL        string `envconfig:"APP_URL" required:"true"`
 	AppPort       int    `envconfig:"APP_PORT" required:"true"`
 	DBHost        string `envconfig:"DB_HOST" required:"true"`
-	DBHostPort    int    `envconfig:"DB_HOST_PORT" required:"true"`
 	DBPort        int    `envconfig:"DB_PORT" required:"true"`
 	DBUsername    string `envconfig:"DB_USERNAME" required:"true"`
 	DBPassword    string `envconfig:"DB_PASSWORD" required:"true"`
@@ -60,10 +59,6 @@ func (c *Config) validate() error {
 
 	if c.DBHost == "" {
 		errors = append(errors, "DB_HOST is required")
-	}
-
-	if c.DBHostPort == 0 {
-		c.DBHostPort = 5432 // Default PostgreSQL port
 	}
 
 	if c.DBPort == 0 {
