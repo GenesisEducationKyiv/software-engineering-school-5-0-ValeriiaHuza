@@ -50,12 +50,11 @@ func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
 		return err
 	}
 
-	subscribed, err := ss.emailSubscribed(email)
+	log.Printf("Subscribing %s for %s weather updates in %s", email, string(frequency), city)
+
+	subscribed := ss.emailSubscribed(email)
 	if subscribed {
 		return ErrEmailAlreadySubscribed
-	}
-	if err != nil {
-		return ErrInvalidInput
 	}
 
 	token := ss.generateToken()
@@ -72,7 +71,11 @@ func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
 		return ErrFailedToSaveSubscription
 	}
 
+	log.Printf("Subscription created for email %s with token %s", email, token)
+
 	ss.mailService.SendConfirmationEmail(newSubscription)
+
+	log.Printf("Confirmation email sent to %s", email)
 
 	return nil
 }
@@ -117,11 +120,10 @@ func (ss *SubscribeService) Unsubscribe(token string) error {
 	return nil
 }
 
-func (ss *SubscribeService) emailSubscribed(email string) (bool, error) {
+func (ss *SubscribeService) emailSubscribed(email string) bool {
+	_, err := ss.subscriptionRepository.FindByEmail(email)
 
-	sub, err := ss.subscriptionRepository.FindByEmail(email)
-
-	return sub != nil, err
+	return err == nil
 }
 
 func (ss *SubscribeService) generateToken() string {

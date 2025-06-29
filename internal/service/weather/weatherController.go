@@ -33,10 +33,13 @@ func (wc *WeatherController) GetWeather(c *gin.Context) {
 		switch {
 		case errors.Is(err, client.ErrCityNotFound):
 			c.String(http.StatusNotFound, err.Error())
+			return
 		case errors.Is(err, client.ErrInvalidRequest):
 			c.String(http.StatusBadRequest, err.Error())
+			return
 		default:
 			c.String(http.StatusBadRequest, "Bad request")
+			return
 		}
 	}
 
@@ -46,7 +49,7 @@ func (wc *WeatherController) GetWeather(c *gin.Context) {
 func validateCityQuery(c *gin.Context) (string, error) {
 	city := c.Query("city")
 	if city == "" {
-		return "", ErrInvalidCityInput // you can define this as a custom error
+		return "", ErrInvalidCityInput
 	}
 	return city, nil
 }
