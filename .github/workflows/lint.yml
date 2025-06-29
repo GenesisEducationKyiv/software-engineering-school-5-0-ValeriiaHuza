@@ -10,6 +10,7 @@ on:
 
 jobs:
   lint:
+    name: Run Go Linter
     runs-on: ubuntu-latest
 
     steps:
@@ -19,22 +20,25 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.3'
-
-      - name: Install golangci-lint
-        run : go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+          go-version: '1.21'
 
       - name: Run golangci-lint
-        run: golangci-lint run ./...
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+          args: --timeout=3m
 
-  staticcheck_l:
-    name: "Run CI"
+  staticcheck:
+    name: Staticcheck
     runs-on: ubuntu-latest
-    
+
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout code
+        uses: actions/checkout@v1
         with:
-        fetch-depth: 1
-      - uses: dominikh/staticcheck-action@v1.2.0
+          fetch-depth: 1
+
+      - name: Run Staticcheck
+        uses: dominikh/staticcheck-action@v1.2.0
         with:
-        version: "2022.1.1"
+          version: "2022.1.1"
