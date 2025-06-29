@@ -10,6 +10,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
+	weatherapi "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client/weatherApi"
 	dbPackage "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/db"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/repository"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/routes"
@@ -53,8 +55,11 @@ func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailSe
 		}
 	}))
 
-	client := client.NewWeatherAPIClient("fake-key", fakeWeatherServer.URL, http.DefaultClient)
-	weatherService := weather.NewWeatherAPIService(client)
+	fakeWeatherClient := weatherapi.NewWeatherAPIClient("fake-key", fakeWeatherServer.URL, http.DefaultClient)
+
+	weatherChain := client.NewWeatherChain(fakeWeatherClient)
+
+	weatherService := weather.NewWeatherAPIService(weatherChain)
 	weatherController := weather.NewWeatherController(weatherService)
 
 	fakeMailService := NewFakeMailService()

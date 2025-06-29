@@ -1,7 +1,4 @@
-//go:build unit
-// +build unit
-
-package client
+package weatherapi
 
 import (
 	"bytes"
@@ -10,6 +7,7 @@ import (
 	"net/http"
 	"testing"
 
+	packageClient "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -86,7 +84,7 @@ func TestFetchWeather_APIError_CityNotFound(t *testing.T) {
 
 	_, err := apiClient.FetchWeather("UnknownCity")
 	assert.Error(t, err)
-	assert.True(t, errors.Is(err, ErrCityNotFound), "expected ErrCityNotFound, got %v", err)
+	assert.True(t, errors.Is(err, packageClient.ErrCityNotFound), "expected ErrCityNotFound, got %v", err)
 }
 
 func TestFetchWeather_APIError_InvalidRequest(t *testing.T) {
@@ -102,5 +100,5 @@ func TestFetchWeather_APIError_InvalidRequest(t *testing.T) {
 	_, err := apiClient.FetchWeather("London")
 
 	assert.Error(t, err)
-	assert.True(t, errors.Is(err, ErrInvalidRequest), "expected ErrInvalidRequest, got %v", err)
+	assert.True(t, errors.Is(err, packageClient.ErrInvalidRequest), "expected ErrInvalidRequest, got %v", err)
 }

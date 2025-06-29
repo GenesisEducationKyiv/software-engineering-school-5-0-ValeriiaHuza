@@ -1,7 +1,6 @@
 package client
 
 import (
-	"fmt"
 	"log"
 )
 
@@ -41,5 +40,7 @@ func (c *WeatherChain) GetWeather(city string) (*WeatherDTO, error) {
 		return c.next.GetWeather(city)
 	}
 
-	return nil, fmt.Errorf("all providers failed for city '%s': last error: %w", city, err)
+	log.Printf("all providers failed for city '%s': last error: %s", city, err)
+
+	return nil, err
 }

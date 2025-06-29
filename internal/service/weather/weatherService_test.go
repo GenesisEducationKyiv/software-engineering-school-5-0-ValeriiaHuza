@@ -1,6 +1,3 @@
-//go:build unit
-// +build unit
-
 package weather
 
 import (
@@ -14,11 +11,11 @@ import (
 
 // --- Mocks ---
 
-type mockWeatherAPIClient struct {
+type mockWeatherChain struct {
 	mock.Mock
 }
 
-func (m *mockWeatherAPIClient) FetchWeather(city string) (*client.WeatherDTO, error) {
+func (m *mockWeatherChain) GetWeather(city string) (*client.WeatherDTO, error) {
 	args := m.Called(city)
 	dto, _ := args.Get(0).(*client.WeatherDTO)
 	return dto, args.Error(1)
@@ -33,8 +30,8 @@ func TestGetWeather_Success(t *testing.T) {
 		Description: "Sunny",
 	}
 
-	mockClient := new(mockWeatherAPIClient)
-	mockClient.On("FetchWeather", "Kyiv").Return(expected, nil)
+	mockClient := new(mockWeatherChain)
+	mockClient.On("GetWeather", "Kyiv").Return(expected, nil)
 
 	service := NewWeatherAPIService(mockClient)
 
@@ -47,8 +44,8 @@ func TestGetWeather_Success(t *testing.T) {
 func TestGetWeather_Error(t *testing.T) {
 	mockErr := errors.New("network error")
 
-	mockClient := new(mockWeatherAPIClient)
-	mockClient.On("FetchWeather", "London").Return((*client.WeatherDTO)(nil), mockErr)
+	mockClient := new(mockWeatherChain)
+	mockClient.On("GetWeather", "London").Return((*client.WeatherDTO)(nil), mockErr)
 
 	service := NewWeatherAPIService(mockClient)
 

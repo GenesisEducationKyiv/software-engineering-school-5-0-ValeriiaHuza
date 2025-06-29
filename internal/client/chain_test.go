@@ -5,7 +5,6 @@ package client
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -66,8 +65,8 @@ func TestWeatherChain_AllProvidersFail_Mock(t *testing.T) {
 	got, err := chain.GetWeather("Odesa")
 	assert.Nil(t, got)
 	assert.Error(t, err)
-	expectedErr := fmt.Sprintf("all providers failed for city 'Odesa': last error: %v", errors.New("fail2"))
-	assert.Equal(t, expectedErr, err.Error())
+
+	assert.Equal(t, errors.New("fail2").Error(), err.Error())
 	provider1.AssertExpectations(t)
 	provider2.AssertExpectations(t)
 }
