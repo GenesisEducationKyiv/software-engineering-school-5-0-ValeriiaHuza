@@ -1,4 +1,4 @@
-module github.com/ValeriiaHuza/weather_api
+module github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza
 
 go 1.24.3
 

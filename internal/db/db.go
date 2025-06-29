@@ -3,7 +3,7 @@ package db
 import (
 	"log"
 
-	"github.com/ValeriiaHuza/weather_api/config"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
