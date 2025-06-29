@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/ValeriiaHuza/weather_api/internal/app"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/app"
 )
 
 func main() {

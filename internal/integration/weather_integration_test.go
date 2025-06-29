@@ -9,8 +9,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/ValeriiaHuza/weather_api/internal/client"
-	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/weather"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -1,8 +1,8 @@
 package routes
 
 import (
-	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
-	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/subscription"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/weather"
 	"github.com/gin-gonic/gin"
 )
 

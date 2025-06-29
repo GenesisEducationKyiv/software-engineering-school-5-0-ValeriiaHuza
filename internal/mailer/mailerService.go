@@ -4,8 +4,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/ValeriiaHuza/weather_api/internal/client"
-	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/subscription"
 	"gopkg.in/gomail.v2"
 )
 

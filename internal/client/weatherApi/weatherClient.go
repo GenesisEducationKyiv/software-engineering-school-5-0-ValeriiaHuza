@@ -1,4 +1,4 @@
-package client
+package weatherapi
 
 import (
 	"encoding/json"
@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
 )
 
 type WeatherAPIClient struct {
@@ -19,20 +21,22 @@ type WeatherAPIClient struct {
 func NewWeatherAPIClient(apiKey string, apiUrl string, http *http.Client) *WeatherAPIClient {
 	return &WeatherAPIClient{
 		apiKey: apiKey,
-		apiUrl: apiUrl,
+		apiUrl: strings.TrimRight(apiUrl, "/"),
 		client: http,
 	}
 }
 
-func (c *WeatherAPIClient) FetchWeather(city string) (*WeatherDTO, error) {
+func (c *WeatherAPIClient) FetchWeather(city string) (*client.WeatherDTO, error) {
 	city = url.QueryEscape(city)
 
-	weatherUrl := fmt.Sprintf("%s/current.json?key=%s&q=%s", strings.TrimRight(c.apiUrl, "/"), c.apiKey, city)
+	weatherURL := fmt.Sprintf("%s/current.json?key=%s&q=%s", c.apiUrl, c.apiKey, city)
 
-	resp, err := c.client.Get(weatherUrl)
+	log.Printf("Sending request to: %s", weatherURL)
+
+	resp, err := c.client.Get(weatherURL)
 
 	if err != nil {
-		log.Println("HTTP request failed:", err)
+		log.Printf(" HTTP request failed: %v", err)
 		return nil, err
 	}
 
@@ -59,7 +63,7 @@ func (c *WeatherAPIClient) FetchWeather(city string) (*WeatherDTO, error) {
 		return nil, err
 	}
 
-	weatherDTO := WeatherDTO{
+	weatherDTO := client.WeatherDTO{
 		Temperature: weather.Current.TempC,
 		Humidity:    weather.Current.Humidity,
 		Description: weather.Current.Condition.Text,
@@ -75,11 +79,11 @@ func (ws *WeatherAPIClient) parseAPIError(body []byte) error {
 	}
 
 	if apiErr.Error.Message != "" {
-		log.Printf("API Error %d: %s\n", apiErr.Error.Code, apiErr.Error.Message)
+		log.Printf("Weather API Error %d: %s\n", apiErr.Error.Code, apiErr.Error.Message)
 		if apiErr.Error.Code == 1006 {
-			return ErrCityNotFound
+			return client.ErrCityNotFound
 		}
-		return ErrInvalidRequest
+		return client.ErrInvalidRequest
 	}
 	return nil
 }
