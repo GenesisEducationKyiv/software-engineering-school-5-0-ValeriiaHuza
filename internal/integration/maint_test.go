@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/ValeriiaHuza/weather_api/internal/client"
 	dbPackage "github.com/ValeriiaHuza/weather_api/internal/db"
+	"github.com/ValeriiaHuza/weather_api/internal/redis"
 	"github.com/ValeriiaHuza/weather_api/internal/repository"
 	"github.com/ValeriiaHuza/weather_api/internal/routes"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
@@ -20,20 +22,28 @@ import (
 )
 
 var (
-	testRouter         *gin.Engine
-	testRepo           *repository.SubscriptionRepository
-	testMailService    *FakeMailService
-	terminateContainer func()
+	testRouter      *gin.Engine
+	testRepo        *repository.SubscriptionRepository
+	testMailService *FakeMailService
+	terminateDB     func()
+	terminateRedis  func()
 )
 
-func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailService, func()) {
+func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailService, func(), func()) {
+	ctx := context.Background()
+
 	// Setup Postgres container
-	db, terminateContainer, err := SetupPostgresContainer()
+	db, terminateDB, err := SetupPostgresContainer()
 	if err != nil {
 		log.Fatalf("Failed to setup test DB: %v", err)
 	}
 
 	dbPackage.AutomatedMigration(db)
+
+	redisTest, terminateRedis, err := SetupRedisContainer()
+	if err != nil {
+		log.Fatalf("Failed to setup test redis: %v", err)
+	}
 
 	// Setup fake weather API
 	fakeWeatherServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -54,8 +64,9 @@ func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailSe
 		}
 	}))
 
+	redisProvider := redis.NewRedisProvider(redisTest, ctx)
 	client := client.NewWeatherAPIClient("fake-key", fakeWeatherServer.URL, http.DefaultClient)
-	weatherService := weather.NewWeatherAPIService(client)
+	weatherService := weather.NewWeatherAPIService(client, &redisProvider)
 	weatherController := weather.NewWeatherController(weatherService)
 
 	fakeMailService := NewFakeMailService()
@@ -68,15 +79,19 @@ func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailSe
 	api := r.Group("/api")
 	routes.WeatherRoute(api, weatherController)
 	routes.SubscribeRoute(api, subscribeController)
-	return r, repo, fakeMailService, terminateContainer
+	return r, repo, fakeMailService, terminateDB, terminateRedis
 }
 
 func TestMain(m *testing.M) {
-	testRouter, testRepo, testMailService, terminateContainer = setupRouter()
+	testRouter, testRepo, testMailService, terminateDB, terminateRedis = setupRouter()
 	code := m.Run()
 
-	if terminateContainer != nil {
-		terminateContainer()
+	if terminateDB != nil {
+		terminateDB()
+	}
+
+	if terminateRedis != nil {
+		terminateRedis()
 	}
 
 	os.Exit(code)

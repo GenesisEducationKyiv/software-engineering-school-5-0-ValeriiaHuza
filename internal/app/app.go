@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"log"
 	"strconv"
 
@@ -10,15 +11,19 @@ import (
 	"github.com/ValeriiaHuza/weather_api/internal/emailBuilder"
 	"github.com/ValeriiaHuza/weather_api/internal/httpclient"
 	"github.com/ValeriiaHuza/weather_api/internal/mailer"
+	redisProvider "github.com/ValeriiaHuza/weather_api/internal/redis"
 	"github.com/ValeriiaHuza/weather_api/internal/repository"
 	"github.com/ValeriiaHuza/weather_api/internal/routes"
 	"github.com/ValeriiaHuza/weather_api/internal/scheduler"
 	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
 	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
+
 	"github.com/gin-gonic/gin"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
+
+var ctx = context.Background()
 
 func Run() error {
 	config, err := config.LoadEnvVariables()
@@ -40,9 +45,23 @@ func Run() error {
 		}
 	}()
 
+	redis, err := redisProvider.ConnectToRedis(ctx, *config)
+
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := redis.Close(); err != nil {
+			log.Printf("Error closing Redis: %v", err)
+		}
+	}()
+
 	router := setupRouter()
 
-	services := initServices(*config, db)
+	redisPrv := redisProvider.NewRedisProvider(redis, ctx)
+
+	services := initServices(*config, db, redisPrv)
 
 	initRoutes(router, services)
 	startBackgroundJobs(services.subscribeService)
@@ -82,12 +101,12 @@ func startServer(config config.Config, router *gin.Engine) error {
 	return router.Run(":" + port)
 }
 
-func initServices(config config.Config, database *gorm.DB) *Services {
+func initServices(config config.Config, database *gorm.DB, redisPrv redisProvider.RedisProvider) *Services {
 
 	http := httpclient.InitHtttClient()
 
 	weatherClient := client.NewWeatherAPIClient(config.WeatherAPIKey, config.WeatherAPIUrl, &http)
-	weatherService := weather.NewWeatherAPIService(weatherClient)
+	weatherService := weather.NewWeatherAPIService(weatherClient, &redisPrv)
 
 	subscribeRepo := repository.NewSubscriptionRepository(database)
 	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.AppURL)
