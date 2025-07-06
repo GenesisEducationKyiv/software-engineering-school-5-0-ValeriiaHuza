@@ -29,21 +29,22 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD} ping | grep PONG"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # redis-commander:
-  #   image: rediscommander/redis-commander:latest
-  #   container_name: redis_commander
-  #   ports:
-  #     - "${REDIS_COMMANDER_PORT}:8081"
-  #   environment:
-  #     - REDIS_HOSTS=local:redis:6379:${REDIS_PASSWORD}
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    platform: linux/amd64
+    container_name: redis_commander
+    ports:
+      - "${REDIS_COMMANDER_PORT}:8081"
+    environment:
+      - REDIS_HOSTS=weather_api:redis:6379:0:${REDIS_PASSWORD}
+    depends_on:
+      redis:
+        condition: service_healthy
         
   app:
     container_name: weather_api
