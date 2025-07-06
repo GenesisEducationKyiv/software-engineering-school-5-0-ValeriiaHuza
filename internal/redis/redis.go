@@ -1,6 +1,3 @@
-//go:build unit
-// +build unit
-
 package redis
 
 import (
@@ -16,7 +13,6 @@ type redisClient interface {
 	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) *redis.StatusCmd
 	Get(ctx context.Context, key string) *redis.StringCmd
 	Del(ctx context.Context, keys ...string) *redis.IntCmd
-	Ping(ctx context.Context) *redis.StatusCmd
 }
 
 type RedisProvider struct {
