@@ -1,3 +1,6 @@
+//go:build unit
+// +build unit
+
 package redis
 
 import (
@@ -9,12 +12,19 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+type redisClient interface {
+	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) *redis.StatusCmd
+	Get(ctx context.Context, key string) *redis.StringCmd
+	Del(ctx context.Context, keys ...string) *redis.IntCmd
+	Ping(ctx context.Context) *redis.StatusCmd
+}
+
 type RedisProvider struct {
-	rdb *redis.Client
+	rdb redisClient
 	ctx context.Context
 }
 
-func NewRedisProvider(redis *redis.Client, ctx context.Context) RedisProvider {
+func NewRedisProvider(redis redisClient, ctx context.Context) RedisProvider {
 	return RedisProvider{
 		rdb: redis,
 		ctx: ctx,
