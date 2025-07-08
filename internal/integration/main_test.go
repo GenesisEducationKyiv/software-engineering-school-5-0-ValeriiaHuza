@@ -10,12 +10,13 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ValeriiaHuza/weather_api/internal/client"
-	dbPackage "github.com/ValeriiaHuza/weather_api/internal/db"
-	"github.com/ValeriiaHuza/weather_api/internal/repository"
-	"github.com/ValeriiaHuza/weather_api/internal/routes"
-	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
-	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
+	weatherapi "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client/weatherApi"
+	dbPackage "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/db"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/repository"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/routes"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/subscription"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/weather"
 	"github.com/gin-gonic/gin"
 )
 
@@ -54,8 +55,11 @@ func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailSe
 		}
 	}))
 
-	client := client.NewWeatherAPIClient("fake-key", fakeWeatherServer.URL, http.DefaultClient)
-	weatherService := weather.NewWeatherAPIService(client)
+	fakeWeatherClient := weatherapi.NewWeatherAPIClient("fake-key", fakeWeatherServer.URL, http.DefaultClient)
+
+	weatherChain := client.NewWeatherChain(fakeWeatherClient)
+
+	weatherService := weather.NewWeatherAPIService(weatherChain)
 	weatherController := weather.NewWeatherController(weatherService)
 
 	fakeMailService := NewFakeMailService()

@@ -6,7 +6,7 @@ package scheduler
 import (
 	"testing"
 
-	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/subscription"
 	"github.com/stretchr/testify/mock"
 )
 
