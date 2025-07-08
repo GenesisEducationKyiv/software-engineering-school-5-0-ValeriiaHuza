@@ -5,18 +5,22 @@ import (
 	"log"
 	"strconv"
 
-	"github.com/ValeriiaHuza/weather_api/config"
-	"github.com/ValeriiaHuza/weather_api/internal/client"
-	"github.com/ValeriiaHuza/weather_api/internal/db"
-	"github.com/ValeriiaHuza/weather_api/internal/emailBuilder"
-	"github.com/ValeriiaHuza/weather_api/internal/httpclient"
-	"github.com/ValeriiaHuza/weather_api/internal/mailer"
-	redisProvider "github.com/ValeriiaHuza/weather_api/internal/redis"
-	"github.com/ValeriiaHuza/weather_api/internal/repository"
-	"github.com/ValeriiaHuza/weather_api/internal/routes"
-	"github.com/ValeriiaHuza/weather_api/internal/scheduler"
-	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
-	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/config"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
+	openweather "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client/openWeather"
+	weatherapi "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client/weatherApi"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/db"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/emailBuilder"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/httpclient"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/mailer"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/repository"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/routes"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/scheduler"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/subscription"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/weather"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/logger"
+
+	redisProvider "GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/redis"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/gomail.v2"
@@ -26,17 +30,29 @@ import (
 var ctx = context.Background()
 
 func Run() error {
+
+	err := logger.InitLoggerFile("app.log")
+	if err != nil {
+		log.Fatalf("Failed to init logger: %v", err)
+	}
+	defer logger.CloseLogFile()
+
 	config, err := config.LoadEnvVariables()
 
 	if err != nil {
 		return err
 	}
 
-	db := db.ConnectToDatabase(*config)
+	db, err := db.ConnectToDatabase(*config)
+
+	if err != nil {
+		return err
+	}
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		log.Fatalf("Failed to get sql.DB from gorm.DB: %v", err)
+		log.Printf("Failed to get sql.DB from gorm.DB: %v", err)
+		return err
 	}
 
 	defer func() {
@@ -103,7 +119,7 @@ func startServer(config config.Config, router *gin.Engine) error {
 
 func initServices(config config.Config, database *gorm.DB, redisPrv redisProvider.RedisProvider) *Services {
 
-	http := httpclient.InitHtttClient()
+	weatherApiChain := buildWeatherResponsibilityChain(config)
 
 	weatherClient := client.NewWeatherAPIClient(config.WeatherAPIKey, config.WeatherAPIUrl, &http)
 	weatherService := weather.NewWeatherAPIService(weatherClient, &redisPrv)
@@ -121,6 +137,22 @@ func initServices(config config.Config, database *gorm.DB, redisPrv redisProvide
 		weatherService:   *weatherService,
 		subscribeService: *subscribeService,
 	}
+}
+
+func buildWeatherResponsibilityChain(config config.Config) *client.WeatherChain {
+	http := httpclient.InitHtttClient()
+
+	geocoding := openweather.NewGeocodingClient(config.OpenWeatherKey, config.OpenWeatherUrl, &http)
+
+	weatherApiClient := weatherapi.NewWeatherAPIClient(config.WeatherAPIKey, config.WeatherAPIUrl, &http)
+	openWeatherClient := openweather.NewWeatherAPIClient(config.OpenWeatherKey, config.OpenWeatherUrl, geocoding, &http)
+
+	weatherApiChain := client.NewWeatherChain(weatherApiClient)
+	openWeatherChain := client.NewWeatherChain(openWeatherClient)
+
+	weatherApiChain.SetNext(openWeatherChain)
+
+	return weatherApiChain
 }
 
 type Services struct {

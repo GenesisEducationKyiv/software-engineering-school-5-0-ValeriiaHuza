@@ -4,12 +4,12 @@ import (
 	"log"
 	"time"
 
-	"github.com/ValeriiaHuza/weather_api/internal/client"
-	"github.com/ValeriiaHuza/weather_api/internal/redis"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/redis"
 )
 
-type weatherAPIClient interface {
-	FetchWeather(city string) (*client.WeatherDTO, error)
+type weatherChain interface {
+	GetWeather(city string) (*client.WeatherDTO, error)
 }
 
 type redisProvider interface {
@@ -18,13 +18,13 @@ type redisProvider interface {
 }
 
 type WeatherService struct {
-	weatherClient weatherAPIClient
+	weatherChain  weatherChain
 	redisProvider redisProvider
 }
 
-func NewWeatherAPIService(weatherClient weatherAPIClient, redisProvider redisProvider) *WeatherService {
+func NewWeatherAPIService(weatherChain weatherChain, redisProvider redisProvider) *WeatherService {
 	return &WeatherService{
-		weatherClient: weatherClient,
+		weatherChain:  weatherChain,
 		redisProvider: redisProvider,
 	}
 }
@@ -45,7 +45,7 @@ func (ws *WeatherService) GetWeather(city string) (*client.WeatherDTO, error) {
 		log.Printf("Redis error while fetching weather for %s: %v", city, err)
 	}
 
-	weatherDto, err := ws.weatherClient.FetchWeather(city)
+	weatherDto, err := ws.weatherChain.GetWeather(city)
 	if err != nil {
 		log.Println("HTTP error in GetWeather :", err)
 		return nil, err

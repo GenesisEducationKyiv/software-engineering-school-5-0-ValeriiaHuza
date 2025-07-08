@@ -8,18 +8,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ValeriiaHuza/weather_api/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
 // --- Mocks ---
 
-type mockWeatherAPIClient struct {
+type mockWeatherChain struct {
 	mock.Mock
 }
 
-func (m *mockWeatherAPIClient) FetchWeather(city string) (*client.WeatherDTO, error) {
+func (m *mockWeatherChain) GetWeather(city string) (*client.WeatherDTO, error) {
 	args := m.Called(city)
 	dto, _ := args.Get(0).(*client.WeatherDTO)
 	return dto, args.Error(1)
