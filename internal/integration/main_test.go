@@ -4,6 +4,7 @@
 package integration
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,7 @@ import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
 	weatherapi "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client/weatherApi"
 	dbPackage "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/db"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/redis"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/repository"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/routes"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/subscription"
@@ -21,20 +23,28 @@ import (
 )
 
 var (
-	testRouter         *gin.Engine
-	testRepo           *repository.SubscriptionRepository
-	testMailService    *FakeMailService
-	terminateContainer func()
+	testRouter      *gin.Engine
+	testRepo        *repository.SubscriptionRepository
+	testMailService *FakeMailService
+	terminateDB     func()
+	terminateRedis  func()
 )
 
-func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailService, func()) {
+func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailService, func(), func()) {
+	ctx := context.Background()
+
 	// Setup Postgres container
-	db, terminateContainer, err := SetupPostgresContainer()
+	db, terminateDB, err := SetupPostgresContainer()
 	if err != nil {
 		log.Fatalf("Failed to setup test DB: %v", err)
 	}
 
 	dbPackage.AutomatedMigration(db)
+
+	redisTest, terminateRedis, err := SetupRedisContainer()
+	if err != nil {
+		log.Fatalf("Failed to setup test redis: %v", err)
+	}
 
 	// Setup fake weather API
 	fakeWeatherServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -55,11 +65,14 @@ func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailSe
 		}
 	}))
 
+	redisProvider := redis.NewRedisProvider(redisTest, ctx)
+
 	fakeWeatherClient := weatherapi.NewWeatherAPIClient("fake-key", fakeWeatherServer.URL, http.DefaultClient)
 
 	weatherChain := client.NewWeatherChain(fakeWeatherClient)
 
-	weatherService := weather.NewWeatherAPIService(weatherChain)
+	weatherService := weather.NewWeatherAPIService(weatherChain, &redisProvider)
+
 	weatherController := weather.NewWeatherController(weatherService)
 
 	fakeMailService := NewFakeMailService()
@@ -72,15 +85,19 @@ func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailSe
 	api := r.Group("/api")
 	routes.WeatherRoute(api, weatherController)
 	routes.SubscribeRoute(api, subscribeController)
-	return r, repo, fakeMailService, terminateContainer
+	return r, repo, fakeMailService, terminateDB, terminateRedis
 }
 
 func TestMain(m *testing.M) {
-	testRouter, testRepo, testMailService, terminateContainer = setupRouter()
+	testRouter, testRepo, testMailService, terminateDB, terminateRedis = setupRouter()
 	code := m.Run()
 
-	if terminateContainer != nil {
-		terminateContainer()
+	if terminateDB != nil {
+		terminateDB()
+	}
+
+	if terminateRedis != nil {
+		terminateRedis()
 	}
 
 	os.Exit(code)

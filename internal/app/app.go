@@ -1,6 +1,7 @@
 package app
 
 import (
+	"context"
 	"log"
 	"strconv"
 
@@ -19,10 +20,14 @@ import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/weather"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/logger"
 
+	redisProvider "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/redis"
+
 	"github.com/gin-gonic/gin"
 	"gopkg.in/gomail.v2"
 	"gorm.io/gorm"
 )
+
+var ctx = context.Background()
 
 func Run() error {
 
@@ -56,9 +61,23 @@ func Run() error {
 		}
 	}()
 
+	redis, err := redisProvider.ConnectToRedis(ctx, *config)
+
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		if err := redis.Close(); err != nil {
+			log.Printf("Error closing Redis: %v", err)
+		}
+	}()
+
 	router := setupRouter()
 
-	services := initServices(*config, db)
+	redisPrv := redisProvider.NewRedisProvider(redis, ctx)
+
+	services := initServices(*config, db, redisPrv)
 
 	initRoutes(router, services)
 	startBackgroundJobs(services.subscribeService)
@@ -98,11 +117,11 @@ func startServer(config config.Config, router *gin.Engine) error {
 	return router.Run(":" + port)
 }
 
-func initServices(config config.Config, database *gorm.DB) *Services {
+func initServices(config config.Config, database *gorm.DB, redisPrv redisProvider.RedisProvider) *Services {
 
 	weatherApiChain := buildWeatherResponsibilityChain(config)
 
-	weatherService := weather.NewWeatherAPIService(weatherApiChain)
+	weatherService := weather.NewWeatherAPIService(weatherApiChain, &redisPrv)
 
 	subscribeRepo := repository.NewSubscriptionRepository(database)
 	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.AppURL)

@@ -22,6 +22,10 @@ type Config struct {
 	OpenWeatherUrl string `envconfig:"OPEN_WEATHER_API_URL" required:"true"`
 	MailEmail      string `envconfig:"MAIL_EMAIL" required:"true"`
 	MailPassword   string `envconfig:"MAIL_PASSWORD" required:"true"`
+
+	RedisPort     int    `envconfig:"REDIS_PORT"`
+	RedisHost     string `envconfig:"REDIS_HOST"`
+	RedisPassword string `envconfig:"REDIS_PASSWORD"`
 }
 
 func LoadEnvVariables() (*Config, error) {
@@ -95,6 +99,13 @@ func (c *Config) validate() error {
 		errors = append(errors, "MAIL_PASSWORD is required")
 	}
 
+	if c.RedisPort == 0 {
+		c.RedisPort = 6379
+	}
+	if c.RedisHost == "" {
+		c.RedisHost = "redis"
+	}
+
 	if len(errors) > 0 {
 		return fmt.Errorf("missing required environment variables: %v", errors)
 	}
@@ -112,3 +123,7 @@ func (c *Config) GetDSNString() string {
 	dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v sslmode=disable", host, user, password, dbName, port)
 	return dsn
 }
+
+// func (c *Config) GetRedisString() string {
+
+// }
