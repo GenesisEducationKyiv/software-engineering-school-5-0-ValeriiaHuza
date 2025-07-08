@@ -20,7 +20,7 @@ import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/weather"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/logger"
 
-	redisProvider "GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/redis"
+	redisProvider "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/redis"
 
 	"github.com/gin-gonic/gin"
 	"gopkg.in/gomail.v2"
@@ -121,8 +121,7 @@ func initServices(config config.Config, database *gorm.DB, redisPrv redisProvide
 
 	weatherApiChain := buildWeatherResponsibilityChain(config)
 
-	weatherClient := client.NewWeatherAPIClient(config.WeatherAPIKey, config.WeatherAPIUrl, &http)
-	weatherService := weather.NewWeatherAPIService(weatherClient, &redisPrv)
+	weatherService := weather.NewWeatherAPIService(weatherApiChain, &redisPrv)
 
 	subscribeRepo := repository.NewSubscriptionRepository(database)
 	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.AppURL)

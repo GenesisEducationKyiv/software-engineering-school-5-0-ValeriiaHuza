@@ -11,16 +11,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ValeriiaHuza/weather_api/internal/client"
-	dbPackage "github.com/ValeriiaHuza/weather_api/internal/db"
-	"github.com/ValeriiaHuza/weather_api/internal/redis"
-	"github.com/ValeriiaHuza/weather_api/internal/repository"
-	"github.com/ValeriiaHuza/weather_api/internal/routes"
-	"github.com/ValeriiaHuza/weather_api/internal/service/subscription"
-	"github.com/ValeriiaHuza/weather_api/internal/service/weather"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
 	weatherapi "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client/weatherApi"
 	dbPackage "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/db"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/redis"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/repository"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/routes"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/subscription"
@@ -71,17 +65,13 @@ func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, *FakeMailSe
 		}
 	}))
 
-<<<<<<< HEAD:internal/integration/maint_test.go
 	redisProvider := redis.NewRedisProvider(redisTest, ctx)
-	client := client.NewWeatherAPIClient("fake-key", fakeWeatherServer.URL, http.DefaultClient)
-	weatherService := weather.NewWeatherAPIService(client, &redisProvider)
-=======
+
 	fakeWeatherClient := weatherapi.NewWeatherAPIClient("fake-key", fakeWeatherServer.URL, http.DefaultClient)
 
 	weatherChain := client.NewWeatherChain(fakeWeatherClient)
 
-	weatherService := weather.NewWeatherAPIService(weatherChain)
->>>>>>> main:internal/integration/main_test.go
+	weatherService := weather.NewWeatherAPIService(weatherChain, &redisProvider)
 
 	weatherController := weather.NewWeatherController(weatherService)
 

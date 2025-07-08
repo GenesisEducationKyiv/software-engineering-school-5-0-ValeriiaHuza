@@ -56,7 +56,7 @@ func TestGetWeather_Success(t *testing.T) {
 	}
 
 	mockRedis := new(mockRedisProvider)
-	mockClient := new(mockWeatherAPIClient)
+	mockClient := new(mockWeatherChain)
 
 	mockRedis.On("Get", "weather:Kyiv", mock.Anything).
 		Return(nil, expected)
@@ -72,7 +72,7 @@ func TestGetWeather_Success(t *testing.T) {
 
 func TestGetWeather_CacheMiss_Success(t *testing.T) {
 	mockRedis := new(mockRedisProvider)
-	mockClient := new(mockWeatherAPIClient)
+	mockClient := new(mockWeatherChain)
 	service := NewWeatherAPIService(mockClient, mockRedis)
 
 	city := "Lviv"
@@ -84,7 +84,7 @@ func TestGetWeather_CacheMiss_Success(t *testing.T) {
 
 	mockRedis.On("Get", "weather:"+city, mock.Anything).Return(errors.New("not found"), nil)
 
-	mockClient.On("FetchWeather", city).Return(expected, nil)
+	mockClient.On("GetWeather", city).Return(expected, nil)
 
 	mockRedis.On("SetWithTTL", "weather:"+city, expected, mock.Anything).Return(nil)
 
@@ -94,36 +94,36 @@ func TestGetWeather_CacheMiss_Success(t *testing.T) {
 	assert.Equal(t, expected, result)
 
 	mockRedis.AssertCalled(t, "Get", "weather:"+city, mock.Anything)
-	mockClient.AssertCalled(t, "FetchWeather", city)
+	mockClient.AssertCalled(t, "GetWeather", city)
 	mockRedis.AssertCalled(t, "SetWithTTL", "weather:"+city, expected, mock.Anything)
 }
 
 func TestGetWeather_CacheMiss_APIError(t *testing.T) {
 	mockRedis := new(mockRedisProvider)
-	mockClient := new(mockWeatherAPIClient)
+	mockClient := new(mockWeatherChain)
 	service := NewWeatherAPIService(mockClient, mockRedis)
 
 	city := "Odesa"
 	mockRedis.On("Get", mock.Anything, mock.Anything).Return(errors.New("not found"), nil)
-	mockClient.On("FetchWeather", city).Return(nil, errors.New("api error"))
+	mockClient.On("GetWeather", city).Return(nil, errors.New("api error"))
 
 	result, err := service.GetWeather(city)
 	assert.Error(t, err)
 	assert.Nil(t, result)
 	mockRedis.AssertCalled(t, "Get", mock.Anything, mock.Anything)
-	mockClient.AssertCalled(t, "FetchWeather", city)
+	mockClient.AssertCalled(t, "GetWeather", city)
 }
 
 func TestGetWeather_CacheMiss_APISuccess_RedisSetError(t *testing.T) {
 	mockRedis := new(mockRedisProvider)
-	mockClient := new(mockWeatherAPIClient)
+	mockClient := new(mockWeatherChain)
 	service := NewWeatherAPIService(mockClient, mockRedis)
 
 	city := "Dnipro"
 	expected := &client.WeatherDTO{Temperature: 10.0, Humidity: 70, Description: "Rainy"}
 
 	mockRedis.On("Get", mock.Anything, mock.Anything).Return(errors.New("not found"), nil)
-	mockClient.On("FetchWeather", city).Return(expected, nil)
+	mockClient.On("GetWeather", city).Return(expected, nil)
 	mockRedis.On("SetWithTTL", mock.Anything, expected, mock.Anything).Return(errors.New("redis error"))
 
 	result, err := service.GetWeather(city)

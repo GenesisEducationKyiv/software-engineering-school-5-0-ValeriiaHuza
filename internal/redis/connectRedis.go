@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/ValeriiaHuza/weather_api/config"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/config"
 	"github.com/redis/go-redis/v9"
 )
 
