@@ -76,6 +76,18 @@ Used for non-blocking, event-driven interactions:
 
 ---
 
+## Reliability
+
+Reliability is very important in a microservice system, espesially when we aim for 99.9% uptime. Here are some simple ways we make sure the system keeps working even when something goes wrong:
+
+- **Retry with Backoff**: service communication will implement retry logic with delay.
+- **Dead Letter Queues (DLQs)**: Messages that repeatedly fail in processing will be moved to DLQs for later inspection.
+- **Health Checks** : Add /health endpoints to verify if services are running and ready.
+- **Monitoring** : Add logs and alerts to quicly detect and resolve problems
+
+
+---
+
 ## Implementation plan 
 
 Microservice decomposition will proceed in multiple phases:
