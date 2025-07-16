@@ -26,6 +26,10 @@ type Config struct {
 	RedisPort     int    `envconfig:"REDIS_PORT"`
 	RedisHost     string `envconfig:"REDIS_HOST"`
 	RedisPassword string `envconfig:"REDIS_PASSWORD"`
+
+	RabbitMQUrl string `envconfig:"RABBITMQ_URL" required:"true"`
+	MQUsername  string `envconfig:"MQ_USERNAME"`
+	MQPassword  string `envconfig:"MQ_PASSWORD"`
 }
 
 func LoadEnvVariables() (*Config, error) {
@@ -106,6 +110,16 @@ func (c *Config) validate() error {
 		c.RedisHost = "redis"
 	}
 
+	if c.RabbitMQUrl == "" {
+		errors = append(errors, "RABBITMQ_URL is required")
+	}
+	if c.MQUsername == "" {
+		c.MQUsername = "rabbitmq"
+	}
+	if c.MQPassword == "" {
+		c.MQPassword = "rabbitmq"
+	}
+
 	if len(errors) > 0 {
 		return fmt.Errorf("missing required environment variables: %v", errors)
 	}
@@ -123,7 +137,3 @@ func (c *Config) GetDSNString() string {
 	dsn := fmt.Sprintf("host=%v user=%v password=%v dbname=%v port=%v sslmode=disable", host, user, password, dbName, port)
 	return dsn
 }
-
-// func (c *Config) GetRedisString() string {
-
-// }

@@ -3,6 +3,7 @@ package emailBuilder
 import (
 	"fmt"
 	"html"
+	"log"
 	"time"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
@@ -49,6 +50,9 @@ func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(
 
 func (w *WeatherEmailBuilder) BuildConfirmationEmail(sub subscription.Subscription) string {
 	confirmationLink := w.buildURL("/api/confirm/") + sub.Token
+
+	log.Println(confirmationLink)
+
 	return fmt.Sprintf(`
 		<p>Hello from Weather Updates!</p>
 		<p>You subscribed for <strong>%s</strong> updates for <strong>%s</strong> weather.</p>
@@ -68,5 +72,6 @@ func (w *WeatherEmailBuilder) BuildConfirmSuccessEmail(sub subscription.Subscrip
 }
 
 func (w *WeatherEmailBuilder) buildURL(path string) string {
+	log.Println("Building URL with appUrl:", w.appUrl, "and path:", path)
 	return w.appUrl + path
 }

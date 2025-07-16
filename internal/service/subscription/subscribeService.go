@@ -1,11 +1,17 @@
 package subscription
 
 import (
+	"errors"
 	"log"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/rabbitmq"
 	"github.com/google/uuid"
 )
+
+type mailPublisher interface {
+	Publish(queue string, payload any) error
+}
 
 type subscriptionRepository interface {
 	Create(sub Subscription) error
@@ -16,29 +22,23 @@ type subscriptionRepository interface {
 	FindByFrequencyAndConfirmation(freq Frequency) ([]Subscription, error)
 }
 
-type mailService interface {
-	SendConfirmationEmail(sub Subscription)
-	SendConfirmSuccessEmail(sub Subscription)
-	SendWeatherUpdateEmail(sub Subscription, weather client.WeatherDTO)
-}
-
 type weatherService interface {
 	GetWeather(city string) (*client.WeatherDTO, error)
 }
 
 type SubscribeService struct {
 	weatherService         weatherService
-	mailService            mailService
 	subscriptionRepository subscriptionRepository
+	mailPublisher          mailPublisher
 }
 
 func NewSubscribeService(weatherService weatherService,
-	mailService mailService,
-	repository subscriptionRepository) *SubscribeService {
+	repository subscriptionRepository,
+	mailPublisher mailPublisher) *SubscribeService {
 	return &SubscribeService{
 		weatherService:         weatherService,
-		mailService:            mailService,
 		subscriptionRepository: repository,
+		mailPublisher:          mailPublisher,
 	}
 }
 
@@ -72,7 +72,18 @@ func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
 
 	log.Printf("Subscription created for email %s with token %s", email, token)
 
-	ss.mailService.SendConfirmationEmail(newSubscription)
+	job := EmailJob{
+		To:           newSubscription.Email,
+		EmailType:    EmailTypeCreateSubscription,
+		Subscription: newSubscription,
+	}
+
+	err := ss.mailPublisher.Publish(rabbitmq.SendEmail, job)
+
+	if err != nil {
+		log.Printf("Failed to publish email job: %v", err)
+		return errors.New("failed to publish email job")
+	}
 
 	log.Printf("Confirmation email sent to %s", email)
 
@@ -94,7 +105,18 @@ func (ss *SubscribeService) ConfirmSubscription(token string) error {
 		return ErrFailedToSaveSubscription
 	}
 
-	ss.mailService.SendConfirmSuccessEmail(*sub)
+	job := EmailJob{
+		To:           sub.Email,
+		EmailType:    EmailTypeConfirmSuccess,
+		Subscription: *sub,
+	}
+
+	err = ss.mailPublisher.Publish(rabbitmq.SendEmail, job)
+
+	if err != nil {
+		log.Printf("Failed to publish email job: %v", err)
+		return errors.New("failed to publish email job")
+	}
 
 	return nil
 }
@@ -141,7 +163,12 @@ func (ss *SubscribeService) SendSubscriptionEmails(freq Frequency) {
 			continue
 		}
 
-		ss.mailService.SendWeatherUpdateEmail(sub, *weather)
+		job := WeatherUpdateJob{
+			To:           sub.Email,
+			Subscription: sub,
+			Weather:      *weather}
+
+		ss.mailPublisher.Publish(rabbitmq.WeatherUpdate, job)
 	}
 }
 

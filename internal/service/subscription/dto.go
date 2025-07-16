@@ -1,6 +1,10 @@
 package subscription
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
+)
 
 var (
 	ErrInvalidRequest           = errors.New("invalid request")
@@ -10,3 +14,23 @@ var (
 	ErrTokenNotFound            = errors.New("token not found")
 	ErrFailedToSaveSubscription = errors.New("failed to save subscription")
 )
+
+type EmailType string
+
+const (
+	EmailTypeCreateSubscription EmailType = "CreateSubscription"
+	EmailTypeConfirmSuccess     EmailType = "ConfirmSuccess"
+)
+
+type EmailJob struct {
+	To           string
+	EmailType    EmailType
+	Subscription Subscription
+}
+
+type WeatherUpdateJob struct {
+	To           string
+	EmailType    string
+	Weather      client.WeatherDTO
+	Subscription Subscription
+}
