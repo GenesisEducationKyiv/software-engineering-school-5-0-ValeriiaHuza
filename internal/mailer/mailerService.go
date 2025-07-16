@@ -1,11 +1,14 @@
 package mailer
 
 import (
+	"encoding/json"
 	"log"
 	"time"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/rabbitmq"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/service/subscription"
+	"github.com/rabbitmq/amqp091-go"
 	"gopkg.in/gomail.v2"
 )
 
@@ -27,6 +30,56 @@ func NewMailerService(mailEmal string, dialer *gomail.Dialer,
 		mailEmal: mailEmal,
 		dialer:   dialer,
 		builder:  builder}
+}
+
+func (ms *MailService) StartEmailWorker(channel *amqp091.Channel) {
+	go ms.consume(channel, rabbitmq.SendEmail, func(body []byte) {
+		var job subscription.EmailJob
+		if err := json.Unmarshal(body, &job); err != nil {
+			log.Println("Failed to unmarshal EmailJob:", err)
+			return
+		}
+		log.Printf("Processing EmailJob: %+v", job)
+
+		switch job.EmailType {
+		case subscription.EmailTypeCreateSubscription:
+			ms.SendConfirmationEmail(job.Subscription)
+		case subscription.EmailTypeConfirmSuccess:
+			ms.SendConfirmSuccessEmail(job.Subscription)
+		default:
+			log.Println("Unknown email type:", job.EmailType)
+		}
+	})
+
+	go ms.consume(channel, rabbitmq.WeatherUpdate, func(body []byte) {
+		var job subscription.WeatherUpdateJob
+		if err := json.Unmarshal(body, &job); err != nil {
+			log.Println("Failed to unmarshal WeatherUpdateJob:", err)
+			return
+		}
+		log.Printf("Processing WeatherUpdateJob: %+v", job)
+
+		ms.SendWeatherUpdateEmail(job.Subscription, job.Weather)
+	})
+}
+
+func (ms *MailService) consume(channel *amqp091.Channel, queue string, handler func(body []byte)) {
+	msgs, err := channel.Consume(
+		queue,
+		"",
+		true,  // auto-ack
+		false, // exclusive
+		false, // no-local
+		false, // no-wait
+		nil,
+	)
+	if err != nil {
+		log.Fatalf("Failed to register consumer for queue %s: %v", queue, err)
+	}
+
+	for msg := range msgs {
+		handler(msg.Body)
+	}
 }
 
 func (ms *MailService) SendConfirmationEmail(sub subscription.Subscription) {

@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"strconv"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/emailBuilder"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/httpclient"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/mailer"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/rabbitmq"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/repository"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/routes"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/internal/scheduler"
@@ -73,11 +75,24 @@ func Run() error {
 		}
 	}()
 
+	rabbit, err := rabbitmq.ConnectToRabbitMQ(config.RabbitMQUrl)
+	if err != nil {
+		return err
+	}
+	defer rabbit.Conn.Close()
+	defer rabbit.Channel.Close()
+
+	if err := declareQueues(rabbit); err != nil {
+		return err
+	}
+
+	emailPublisher := rabbitmq.NewRabbitMQPublisher(rabbit.Channel)
+
 	router := setupRouter()
 
 	redisPrv := redisProvider.NewRedisProvider(redis, ctx)
 
-	services := initServices(*config, db, redisPrv)
+	services := initServices(*config, db, redisPrv, emailPublisher)
 
 	initRoutes(router, services)
 	startBackgroundJobs(services.subscribeService)
@@ -117,7 +132,7 @@ func startServer(config config.Config, router *gin.Engine) error {
 	return router.Run(":" + port)
 }
 
-func initServices(config config.Config, database *gorm.DB, redisPrv redisProvider.RedisProvider) *Services {
+func initServices(config config.Config, database *gorm.DB, redisPrv redisProvider.RedisProvider, emailPublisher *rabbitmq.RabbitMQPublisher) *Services {
 
 	weatherApiChain := buildWeatherResponsibilityChain(config)
 
@@ -130,7 +145,9 @@ func initServices(config config.Config, database *gorm.DB, redisPrv redisProvide
 	dialer := gomail.NewDialer("smtp.gmail.com", 587, mailEmail, config.MailPassword)
 	mailerService := mailer.NewMailerService(mailEmail, dialer, emailBuilder)
 
-	subscribeService := subscription.NewSubscribeService(weatherService, mailerService, subscribeRepo)
+	go mailerService.StartEmailWorker(emailPublisher.Channel)
+
+	subscribeService := subscription.NewSubscribeService(weatherService, subscribeRepo, emailPublisher)
 
 	return &Services{
 		weatherService:   *weatherService,
@@ -157,4 +174,19 @@ func buildWeatherResponsibilityChain(config config.Config) *client.WeatherChain 
 type Services struct {
 	weatherService   weather.WeatherService
 	subscribeService subscription.SubscribeService
+}
+
+func declareQueues(r *rabbitmq.RabbitMQ) error {
+	queues := []string{
+		rabbitmq.SendEmail,
+		rabbitmq.WeatherUpdate,
+	}
+
+	for _, q := range queues {
+		_, err := r.Channel.QueueDeclare(q, true, false, false, false, nil)
+		if err != nil {
+			return fmt.Errorf("failed to declare queue %s: %w", q, err)
+		}
+	}
+	return nil
 }

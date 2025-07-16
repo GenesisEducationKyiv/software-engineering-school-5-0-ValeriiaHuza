@@ -3,6 +3,7 @@ module github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaH
 go 1.24.3
 
 require (
+	github.com/rabbitmq/amqp091-go v1.10.0
 	github.com/redis/go-redis/v9 v9.7.3
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/gomail.v2 v2.0.0-20160411212932-81ebce5c23df
