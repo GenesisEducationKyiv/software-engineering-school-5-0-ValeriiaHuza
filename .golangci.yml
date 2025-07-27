@@ -24,7 +24,7 @@ linters:
     - sqlclosecheck
   fast: false
 
-  settings:
+linters-settings:
    forbidigo:
     forbid:
         # Built-in bootstrapping functions.
