@@ -83,7 +83,7 @@ func (ms *MailService) consume(channel *amqp091.Channel, queue string, handler f
 	for msg := range msgs {
 		handler(msg.Body)
 		if err := msg.Ack(false); err != nil {
-			log.Printf("Failed to ack message - %s: %v", msg, err)
+			log.Printf("Failed to ack message: %v", err)
 		}
 	}
 }
