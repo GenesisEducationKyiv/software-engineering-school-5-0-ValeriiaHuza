@@ -54,13 +54,13 @@ func TestFetchWeather_GeocodingError(t *testing.T) {
 
 func TestFetchWeather_Non200Status(t *testing.T) {
 	geo := &mockGeocodingClient{coord: &Coordinates{Lat: 50.0, Lon: 30.0}}
-	client := newMockClient("bad request", 404, nil)
+	client := newMockClient("could not get weather", 404, nil)
 	api := NewWeatherAPIClient("testkey", "http://api", geo, client)
 
 	result, err := api.FetchWeather("Kyiv")
 	assert.Error(t, err)
 	assert.Nil(t, result)
-	assert.Equal(t, "could not get weather", err.Error())
+	assert.Equal(t, "OpenWeather API request failed with status 404: could not get weather", err.Error())
 }
 
 func TestFetchWeather_BadJSON(t *testing.T) {
