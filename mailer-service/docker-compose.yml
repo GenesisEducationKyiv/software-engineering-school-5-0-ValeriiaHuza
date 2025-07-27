@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  weather:
+    container_name: mailer
+    image: valeriia/mailer-service
+    build: ./
+    ports:
+      - "${MAILER_PORT}:${MAILER_PORT}"
+    networks:
+      - weather-net
+
+networks:
+  weather-net:
+    external: true
