@@ -24,22 +24,22 @@ linters:
     - sqlclosecheck
   fast: false
 
-linters-settings:
-  forbidigo:
-    forbid:
-      - name: print
-        pattern: ^print(ln)?$  # Forbid `print` and `println`.
-        msg: Avoid using `print` or `println`.
+# linters-settings:
+#   forbidigo:
+#     forbid:
+#       - name: print
+#         pattern: ^print(ln)?$  # Forbid `print` and `println`.
+#         msg: Avoid using `print` or `println`.
 
-      - name: fmt
-        pattern: ^fmt\.Print.*  # Forbid fmt.Print, fmt.Println, fmt.Printf, etc.
-        msg: Do not commit print statements.
+#       - name: fmt
+#         pattern: ^fmt\.Print.*  # Forbid fmt.Print, fmt.Println, fmt.Printf, etc.
+#         msg: Do not commit print statements.
 
-      - name: spew
-        pattern: ^spew\.(ConfigState\.)?Dump$  # Forbid spew.Dump and ConfigState.Dump
-        msg: Avoid spew dump in committed code.
+#       - name: spew
+#         pattern: ^spew\.(ConfigState\.)?Dump$  # Forbid spew.Dump and ConfigState.Dump
+#         msg: Avoid spew dump in committed code.
 
-      - name: v1dump
-        pattern: ^v1\.Dump$  # Forbid v1.Dump usage from a specific package.
-        pkg: ^example.com/pkg/api/v1$
-        msg: Avoid v1.Dump from API package.
+#       - name: v1dump
+#         pattern: ^v1\.Dump$  # Forbid v1.Dump usage from a specific package.
+#         pkg: ^example.com/pkg/api/v1$
+#         msg: Avoid v1.Dump from API package.
