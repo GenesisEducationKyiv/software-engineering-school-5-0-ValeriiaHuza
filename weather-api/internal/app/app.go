@@ -128,7 +128,8 @@ func startServer(config config.Config, router *gin.Engine) error {
 	return router.Run(":" + port)
 }
 
-func initServices(config config.Config, database *gorm.DB, redisPrv redisProvider.RedisProvider, emailPublisher *rabbitmq.RabbitMQPublisher) *Services {
+func initServices(config config.Config, database *gorm.DB,
+	redisPrv redisProvider.RedisProvider, emailPublisher *rabbitmq.RabbitMQPublisher) *Services {
 
 	weatherApiChain := buildWeatherResponsibilityChain(config)
 
