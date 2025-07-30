@@ -49,7 +49,7 @@ func initServices(config config.Config, rabbit rabbitmq.RabbitMQ) {
 	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.ApiURL)
 
 	mailEmail := config.MailEmail
-	dialer := gomail.NewDialer("smtp.gmail.com", 587, mailEmail, config.MailPassword)
+	dialer := gomail.NewDialer(config.MailDialerHost, config.MailDialerPort, mailEmail, config.MailPassword)
 	mailerService := mailer.NewMailerService(mailEmail, dialer, emailBuilder)
 
 	rabbitmqConsumer := rabbitmq.NewRabbitMQConsumer(rabbit.Channel)

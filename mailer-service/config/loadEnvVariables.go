@@ -19,6 +19,9 @@ type Config struct {
 	RabbitMQUrl string `envconfig:"RABBITMQ_URL" required:"true"`
 	MQUsername  string `envconfig:"MQ_USERNAME" required:"true"`
 	MQPassword  string `envconfig:"MQ_PASSWORD" required:"true"`
+
+	MailDialerHost string `envconfig:"MAIL_DIALER_HOST"`
+	MailDialerPort int    `envconfig:"MAIL_DIALER_PORT"`
 }
 
 func LoadEnvVariables() (*Config, error) {
@@ -72,6 +75,14 @@ func (c *Config) validate() error {
 	}
 	if c.MQPassword == "" {
 		errors = append(errors, "MQ_PASSWORD is required")
+	}
+
+	if c.MailDialerHost == "" {
+		c.MailDialerHost = "smtp.gmail.com" // Default SMTP host
+	}
+
+	if c.MailDialerPort == 0 {
+		c.MailDialerPort = 587 // Default SMTP port
 	}
 
 	if len(errors) > 0 {
