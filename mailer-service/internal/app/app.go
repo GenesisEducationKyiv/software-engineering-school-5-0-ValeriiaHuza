@@ -37,9 +37,7 @@ func Run() error {
 		return err
 	}
 
-	emailPublisher := rabbitmq.NewRabbitMQPublisher(rabbit.Channel)
-
-	initServices(*config, emailPublisher)
+	initServices(*config, *rabbit)
 
 	router := gin.Default()
 
@@ -47,14 +45,16 @@ func Run() error {
 	return router.Run(":" + port)
 }
 
-func initServices(config config.Config, emailPublisher *rabbitmq.RabbitMQPublisher) {
+func initServices(config config.Config, rabbit rabbitmq.RabbitMQ) {
 	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.ApiURL)
 
 	mailEmail := config.MailEmail
 	dialer := gomail.NewDialer("smtp.gmail.com", 587, mailEmail, config.MailPassword)
 	mailerService := mailer.NewMailerService(mailEmail, dialer, emailBuilder)
 
-	go mailerService.StartEmailWorker(emailPublisher.Channel)
+	rabbitmqConsumer := rabbitmq.NewRabbitMQConsumer(rabbit.Channel)
+
+	go mailerService.StartEmailWorker(rabbitmqConsumer)
 
 }
 

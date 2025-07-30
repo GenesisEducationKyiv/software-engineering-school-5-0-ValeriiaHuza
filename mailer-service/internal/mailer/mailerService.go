@@ -7,12 +7,15 @@ import (
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/internal/rabbitmq"
 
-	"github.com/rabbitmq/amqp091-go"
 	"gopkg.in/gomail.v2"
 )
 
 type dialer interface {
 	DialAndSend(msg ...*gomail.Message) error
+}
+
+type rabbitMQConsumer interface {
+	Consume(queue string, handler func(body []byte)) error
 }
 
 type weatherEmailBuilder interface {
@@ -35,8 +38,8 @@ func NewMailerService(mailEmail string, dialer dialer,
 		builder:   builder}
 }
 
-func (ms *MailService) StartEmailWorker(channel *amqp091.Channel) {
-	go ms.consume(channel, rabbitmq.SendEmail, func(body []byte) {
+func (ms *MailService) StartEmailWorker(consumer rabbitMQConsumer) {
+	consumer.Consume(rabbitmq.SendEmail, func(body []byte) {
 		var job EmailJob
 		if err := json.Unmarshal(body, &job); err != nil {
 			log.Println("Failed to unmarshal EmailJob:", err)
@@ -54,7 +57,7 @@ func (ms *MailService) StartEmailWorker(channel *amqp091.Channel) {
 		}
 	})
 
-	go ms.consume(channel, rabbitmq.WeatherUpdate, func(body []byte) {
+	consumer.Consume(rabbitmq.WeatherUpdate, func(body []byte) {
 		var job WeatherUpdateJob
 		if err := json.Unmarshal(body, &job); err != nil {
 			log.Println("Failed to unmarshal WeatherUpdateJob:", err)
@@ -64,28 +67,6 @@ func (ms *MailService) StartEmailWorker(channel *amqp091.Channel) {
 
 		ms.SendWeatherUpdateEmail(job.Subscription, job.Weather)
 	})
-}
-
-func (ms *MailService) consume(channel *amqp091.Channel, queue string, handler func(body []byte)) {
-	msgs, err := channel.Consume(
-		queue,
-		"",
-		false, // auto-ack
-		false, // exclusive
-		false, // no-local
-		false, // no-wait
-		nil,
-	)
-	if err != nil {
-		log.Fatalf("Failed to register consumer for queue %s: %v", queue, err)
-	}
-
-	for msg := range msgs {
-		handler(msg.Body)
-		if err := msg.Ack(false); err != nil {
-			log.Printf("Failed to ack message: %v", err)
-		}
-	}
 }
 
 func (ms *MailService) SendConfirmationEmail(sub SubscriptionDTO) {
