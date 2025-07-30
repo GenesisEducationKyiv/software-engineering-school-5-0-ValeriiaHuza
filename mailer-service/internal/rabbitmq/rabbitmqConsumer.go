@@ -14,7 +14,7 @@ func NewRabbitMQConsumer(channel *amqp091.Channel) *RabbitMQConsumer {
 	return &RabbitMQConsumer{channel: channel}
 }
 
-func (c *RabbitMQConsumer) Consume(queue string, handler func(body []byte)) error {
+func (c *RabbitMQConsumer) Consume(queue string, handler func(body []byte)) {
 	msgs, err := c.channel.Consume(
 		queue,
 		"",
@@ -25,8 +25,9 @@ func (c *RabbitMQConsumer) Consume(queue string, handler func(body []byte)) erro
 		nil,
 	)
 	if err != nil {
-		return err
+		log.Printf("Failed to register a consumer: %v", err)
 	}
+
 	go func() {
 		for msg := range msgs {
 			handler(msg.Body)
@@ -35,5 +36,4 @@ func (c *RabbitMQConsumer) Consume(queue string, handler func(body []byte)) erro
 			}
 		}
 	}()
-	return nil
 }

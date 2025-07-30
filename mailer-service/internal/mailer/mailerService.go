@@ -15,7 +15,7 @@ type dialer interface {
 }
 
 type rabbitMQConsumer interface {
-	Consume(queue string, handler func(body []byte)) error
+	Consume(queue string, handler func(body []byte))
 }
 
 type weatherEmailBuilder interface {
