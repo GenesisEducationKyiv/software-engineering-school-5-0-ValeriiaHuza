@@ -26,3 +26,7 @@ func Sync() {
 func GetLogger() *zap.Logger {
 	return logger
 }
+
+func InitTestLogger() {
+	logger = zap.NewExample()
+}

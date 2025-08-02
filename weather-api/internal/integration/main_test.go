@@ -20,6 +20,7 @@ import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/routes"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/subscription"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/weather"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 
 	"github.com/gin-gonic/gin"
 )
@@ -34,6 +35,8 @@ var (
 
 func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, func()) {
 	ctx := context.Background()
+
+	logger.InitTestLogger()
 
 	// Setup Postgres container
 	db, terminateDB, err := SetupPostgresContainer()

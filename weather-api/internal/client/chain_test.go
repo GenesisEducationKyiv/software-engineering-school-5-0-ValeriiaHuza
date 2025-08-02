@@ -7,6 +7,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -20,8 +21,11 @@ func (m *mockWeatherProvider) FetchWeather(city string) (*WeatherDTO, error) {
 	dto, _ := args.Get(0).(*WeatherDTO)
 	return dto, args.Error(1)
 }
-
+func init() {
+	logger.InitTestLogger()
+}
 func TestWeatherChain_SuccessFirstProvider_Mock(t *testing.T) {
+
 	want := &WeatherDTO{Temperature: 25}
 	provider := new(mockWeatherProvider)
 	provider.On("FetchWeather", "Kyiv").Return(want, nil)
@@ -35,6 +39,7 @@ func TestWeatherChain_SuccessFirstProvider_Mock(t *testing.T) {
 }
 
 func TestWeatherChain_SecondProviderSuccess_Mock(t *testing.T) {
+
 	provider1 := new(mockWeatherProvider)
 	provider2 := new(mockWeatherProvider)
 	want := &WeatherDTO{Temperature: 18}
@@ -53,6 +58,7 @@ func TestWeatherChain_SecondProviderSuccess_Mock(t *testing.T) {
 }
 
 func TestWeatherChain_AllProvidersFail_Mock(t *testing.T) {
+
 	provider1 := new(mockWeatherProvider)
 	provider2 := new(mockWeatherProvider)
 
