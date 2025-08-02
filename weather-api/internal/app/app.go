@@ -12,6 +12,7 @@ import (
 	weatherapi "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client/weatherApi"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/db"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/httpclient"
+	metricP "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/metrics"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/rabbitmq"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/repository"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/routes"
@@ -19,6 +20,8 @@ import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/subscription"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/weather"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
+	"github.com/VictoriaMetrics/metrics"
+	"go.uber.org/zap"
 
 	redisProvider "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/redis"
 
@@ -29,11 +32,13 @@ import (
 func Run() error {
 	var ctx = context.Background()
 
-	err := logger.InitLoggerFile("app.log")
-	if err != nil {
-		log.Fatalf("Failed to init logger: %v", err)
+	if err := logger.InitZapLogger(); err != nil {
+		log.Fatalf("Failed to initialize zap logger: %v", err)
 	}
-	defer logger.CloseLogFile()
+
+	defer logger.Sync()
+
+	logger.GetLogger().Info("Starting Weather Api Service...")
 
 	config, err := config.LoadEnvVariables()
 
@@ -49,13 +54,13 @@ func Run() error {
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		log.Printf("Failed to get sql.DB from gorm.DB: %v", err)
+		logger.GetLogger().Error("Failed to get sql.DB from gorm.DB", zap.Error(err))
 		return err
 	}
 
 	defer func() {
 		if err := sqlDB.Close(); err != nil {
-			log.Printf("Error closing database: %v", err)
+			logger.GetLogger().Error("Failed to close database connection", zap.Error(err))
 		}
 	}()
 
@@ -67,7 +72,7 @@ func Run() error {
 
 	defer func() {
 		if err := redis.Close(); err != nil {
-			log.Printf("Error closing Redis: %v", err)
+			logger.GetLogger().Error("Failed to close Redis connection", zap.Error(err))
 		}
 	}()
 
@@ -99,9 +104,15 @@ func Run() error {
 func setupRouter() *gin.Engine {
 	router := gin.Default()
 
+	router.Use(metricP.MetricsMiddleware())
+
 	router.Static("/static", "./static")
 	router.GET("/", func(c *gin.Context) {
 		c.File("./static/index.html")
+	})
+
+	router.GET("/metrics", func(c *gin.Context) {
+		metrics.WritePrometheus(c.Writer, true)
 	})
 
 	return router

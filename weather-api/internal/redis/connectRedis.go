@@ -3,10 +3,11 @@ package redis
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/config"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 func ConnectToRedis(ctx context.Context, config config.Config) (*redis.Client, error) {
@@ -18,12 +19,12 @@ func ConnectToRedis(ctx context.Context, config config.Config) (*redis.Client, e
 
 	// Ping to check Redis connection
 	if _, err := redisClient.Ping(ctx).Result(); err != nil {
-		log.Printf("Failed to connect to Redis: %v", err)
+		logger.GetLogger().Error("Failed to connect to Redis", zap.Error(err))
 		redisClient.Close()
 		return nil, err
 	}
 
-	log.Println("Connected to redis")
+	logger.GetLogger().Info("Connected to Redis", zap.String("host", config.RedisHost), zap.Int("port", config.RedisPort))
 
 	return redisClient, nil
 }

@@ -7,8 +7,13 @@ import (
 	"testing"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/subscription"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/stretchr/testify/mock"
 )
+
+func init() {
+	logger.InitTestLogger()
+}
 
 // --- Mocks ---
 

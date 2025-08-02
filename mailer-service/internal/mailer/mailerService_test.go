@@ -7,9 +7,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/gomail.v2"
 )
+
+func init() {
+	logger.InitTestLogger()
+}
 
 // --- Mocks ---
 

@@ -11,8 +11,13 @@ import (
 	"testing"
 
 	packageClient "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	logger.InitTestLogger()
+}
 
 type MockRoundTripper struct {
 	resp *http.Response

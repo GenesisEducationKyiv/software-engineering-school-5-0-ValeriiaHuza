@@ -3,10 +3,11 @@ package emailBuilder
 import (
 	"fmt"
 	"html"
-	"log"
 	"time"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/internal/mailer"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
+	"go.uber.org/zap"
 )
 
 type WeatherEmailBuilder struct {
@@ -50,7 +51,7 @@ func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(
 func (w *WeatherEmailBuilder) BuildConfirmationEmail(sub mailer.SubscriptionDTO) string {
 	confirmationLink := w.buildURL("/api/confirm/") + sub.Token
 
-	log.Println(confirmationLink)
+	logger.GetLogger().Info("Building confirmation email", zap.String("confirmationLink", confirmationLink))
 
 	escapedCity := html.EscapeString(sub.City)
 
@@ -73,6 +74,6 @@ func (w *WeatherEmailBuilder) BuildConfirmSuccessEmail(sub mailer.SubscriptionDT
 }
 
 func (w *WeatherEmailBuilder) buildURL(path string) string {
-	log.Println("Building URL with appUrl:", w.appUrl, "and path:", path)
+	logger.GetLogger().Info("Building URL", zap.String("appUrl", w.appUrl), zap.String("path", path))
 	return w.appUrl + path
 }

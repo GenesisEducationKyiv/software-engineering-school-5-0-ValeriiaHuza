@@ -3,10 +3,11 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"time"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/redis/go-redis/v9"
+	"go.uber.org/zap"
 )
 
 type redisClient interface {
@@ -33,7 +34,7 @@ func (c *RedisProvider) Set(key string, value interface{}) error {
 		return err
 	}
 
-	log.Printf("Set to Redis : key - %s", key)
+	logger.GetLogger().Info("Set to Redis", zap.String("key", key))
 
 	return c.rdb.Set(c.ctx, key, data, 0).Err()
 }
@@ -44,7 +45,7 @@ func (c *RedisProvider) SetWithTTL(key string, value interface{}, ttl time.Durat
 		return err
 	}
 
-	log.Printf("Set to Redis with ttl : key - %s", key)
+	logger.GetLogger().Info("Set to Redis with TTL", zap.String("key", key), zap.Duration("ttl", ttl))
 
 	return c.rdb.Set(c.ctx, key, data, ttl).Err()
 }
@@ -55,12 +56,12 @@ func (c *RedisProvider) Get(key string, dest interface{}) error {
 		return err
 	}
 
-	log.Printf("Get from Redis : key - %s", key)
+	logger.GetLogger().Info("Get from Redis", zap.String("key", key))
 
 	return json.Unmarshal([]byte(data), dest)
 }
 
 func (c *RedisProvider) Delete(key ...string) error {
-	log.Printf("Delete from Redis : %s", key)
+	logger.GetLogger().Info("Delete from Redis", zap.Strings("keys", key))
 	return c.rdb.Del(c.ctx, key...).Err()
 }

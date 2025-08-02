@@ -1,9 +1,9 @@
 package rabbitmq
 
 import (
-	"log"
-
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/rabbitmq/amqp091-go"
+	"go.uber.org/zap"
 )
 
 type RabbitMQ struct {
@@ -14,13 +14,13 @@ type RabbitMQ struct {
 func ConnectToRabbitMQ(connectionUrl string) (*RabbitMQ, error) {
 	conn, err := amqp091.Dial(connectionUrl)
 	if err != nil {
-		log.Printf("Failed to connect to RabbitMQ: %v", err)
+		logger.GetLogger().Error("Failed to connect to RabbitMQ", zap.Error(err))
 		return nil, err
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Printf("Failed to open a RabbitMQ channel: %v", err)
+		logger.GetLogger().Error("Failed to open a RabbitMQ channel", zap.Error(err))
 		conn.Close() // Clean up the connection
 		return nil, err
 	}
@@ -29,7 +29,7 @@ func ConnectToRabbitMQ(connectionUrl string) (*RabbitMQ, error) {
 		Channel: ch,
 	}
 
-	log.Println("Connected to RabbitMQ successfully")
+	logger.GetLogger().Info("Connected to RabbitMQ successfully")
 
 	return rabbitMQ, nil
 }
@@ -37,12 +37,13 @@ func ConnectToRabbitMQ(connectionUrl string) (*RabbitMQ, error) {
 func (r *RabbitMQ) Close() error {
 	if r.Channel != nil {
 		if err := r.Channel.Close(); err != nil {
-			log.Printf("Failed to close RabbitMQ channel: %v", err)
+			logger.GetLogger().Error("Failed to close RabbitMQ channel", zap.Error(err))
+			return err
 		}
 	}
 	if r.Conn != nil {
 		if err := r.Conn.Close(); err != nil {
-			log.Printf("Failed to close RabbitMQ connection: %v", err)
+			logger.GetLogger().Error("Failed to close RabbitMQ connection", zap.Error(err))
 			return err
 		}
 	}

@@ -8,8 +8,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/stretchr/testify/assert"
 )
+
+func init() {
+	logger.InitTestLogger()
+}
 
 // --- Mocks ---
 
