@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
+	"go.uber.org/zap"
 )
 
 type GeocodingClient struct {
@@ -33,35 +35,38 @@ func (c *GeocodingClient) GetCityCoordinates(city string) (*Coordinates, error) 
 
 	geocodingURL := fmt.Sprintf("%s/geo/1.0/direct?q=%s&limit=1&appid=%s", c.apiUrl, city, c.apiKey)
 
-	log.Printf("Sending geocoding request for city: %s", city)
+	logger.GetLogger().Info("Sending request to OpenWeather Geocoding API", zap.String("city", city), zap.String("url", geocodingURL))
 	resp, err := c.client.Get(geocodingURL)
 
 	if err != nil {
-		log.Printf("HTTP request failed: %v", err)
+		logger.GetLogger().Error("HTTP request to OpenWeather Geocoding failed", zap.Error(err))
 		return nil, err
 	}
 
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
+			logger.GetLogger().Error("Failed to close response body", zap.Error(err))
 		}
 	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("Failed to read geocoding response body:", err)
+		logger.GetLogger().Error("Failed to read geocoding response body", zap.Error(err))
 		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Printf("Geogoding error : %s", body)
+		logger.GetLogger().Error("Geocoding API returned non-200 status code",
+			zap.Int("statusCode", resp.StatusCode),
+			zap.String("responseBody", string(body)),
+		)
 		return nil, errors.New("could not get city coordinates")
 	}
 
 	var geocoding []Coordinates
 
 	if err := json.Unmarshal(body, &geocoding); err != nil {
-		log.Println("Failed to parse JSON:", err)
+		logger.GetLogger().Error("Failed to parse JSON response from Geocoding API", zap.Error(err))
 		return nil, err
 	}
 

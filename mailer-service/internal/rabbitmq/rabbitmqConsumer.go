@@ -1,9 +1,9 @@
 package rabbitmq
 
 import (
-	"log"
-
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/rabbitmq/amqp091-go"
+	"go.uber.org/zap"
 )
 
 type RabbitMQConsumer struct {
@@ -25,14 +25,15 @@ func (c *RabbitMQConsumer) Consume(queue string, handler func(body []byte)) {
 		nil,
 	)
 	if err != nil {
-		log.Printf("Failed to register a consumer: %v", err)
+		logger.GetLogger().Error("Failed to register a consumer", zap.Error(err))
+		return
 	}
 
 	go func() {
 		for msg := range msgs {
 			handler(msg.Body)
 			if err := msg.Ack(false); err != nil {
-				log.Printf("Failed to ack message: %v", err)
+				logger.GetLogger().Error("Failed to ack message", zap.Error(err))
 			}
 		}
 	}()

@@ -2,11 +2,12 @@ package subscription
 
 import (
 	"errors"
-	"log"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/rabbitmq"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/google/uuid"
+	"go.uber.org/zap"
 )
 
 type mailPublisher interface {
@@ -49,7 +50,10 @@ func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
 		return err
 	}
 
-	log.Printf("Subscribing %s for %s weather updates in %s", email, string(frequency), city)
+	logger.GetLogger().Info("Subscribing for weather updates",
+		zap.String("email", email),
+		zap.String("city", city),
+		zap.String("frequency", string(frequency)))
 
 	subscribed := ss.emailSubscribed(email)
 	if subscribed {
@@ -66,11 +70,14 @@ func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
 	}
 
 	if err := ss.subscriptionRepository.Create(newSubscription); err != nil {
-		log.Println("Db error : ", err.Error())
+		logger.GetLogger().Error("Failed to create subscription",
+			zap.String("email", email),
+			zap.Error(err))
 		return ErrFailedToSaveSubscription
 	}
 
-	log.Printf("Subscription created for email %s with token %s", email, token)
+	logger.GetLogger().Info("Subscription created",
+		zap.String("email", email))
 
 	job := EmailJob{
 		To:           newSubscription.Email,
@@ -81,11 +88,14 @@ func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
 	err := ss.mailPublisher.Publish(rabbitmq.SendEmail, job)
 
 	if err != nil {
-		log.Printf("Failed to publish email job: %v", err)
+		logger.GetLogger().Error("Failed to publish email job",
+			zap.String("email", newSubscription.Email),
+			zap.Error(err))
 		return errors.New("failed to publish email job")
 	}
 
-	log.Printf("Confirmation email sent to %s", email)
+	logger.GetLogger().Info("Confirmation email sent",
+		zap.String("email", email))
 
 	return nil
 }
@@ -101,7 +111,10 @@ func (ss *SubscribeService) ConfirmSubscription(token string) error {
 	sub.Confirmed = true
 
 	if err := ss.subscriptionRepository.Update(*sub); err != nil {
-		log.Println("Failed to update subscription:", err)
+		logger.GetLogger().Error("Failed to update subscription",
+			zap.String("token", token),
+			zap.Error(err))
+
 		return ErrFailedToSaveSubscription
 	}
 
@@ -114,7 +127,9 @@ func (ss *SubscribeService) ConfirmSubscription(token string) error {
 	err = ss.mailPublisher.Publish(rabbitmq.SendEmail, job)
 
 	if err != nil {
-		log.Printf("Failed to publish email job: %v", err)
+		logger.GetLogger().Error("Failed to publish email job",
+			zap.String("email", sub.Email),
+			zap.Error(err))
 		return errors.New("failed to publish email job")
 	}
 
@@ -134,7 +149,9 @@ func (ss *SubscribeService) Unsubscribe(token string) error {
 	}
 
 	if err := ss.subscriptionRepository.Delete(*sub); err != nil {
-		log.Println("Failed to delete subscription:", err)
+		logger.GetLogger().Error("Failed to delete subscription",
+			zap.String("token", token),
+			zap.Error(err))
 		return ErrInvalidInput
 	}
 
@@ -153,12 +170,16 @@ func (ss *SubscribeService) generateToken() string {
 
 func (ss *SubscribeService) SendSubscriptionEmails(freq Frequency) {
 	subs := ss.GetConfirmedSubscriptionsByFrequency(freq)
-	log.Printf("Found %d %s subscriptions", len(subs), string(freq))
+	logger.GetLogger().Info("Sending subscription emails",
+		zap.String("frequency", string(freq)),
+		zap.Int("count", len(subs)))
 
 	for _, sub := range subs {
 		weather, err := ss.weatherService.GetWeather(sub.City)
 		if err != nil {
-			log.Println("Weather error for", sub.City, ":", err)
+			logger.GetLogger().Error("Failed to fetch weather data",
+				zap.String("city", sub.City),
+				zap.Error(err))
 			continue
 		}
 
@@ -168,7 +189,9 @@ func (ss *SubscribeService) SendSubscriptionEmails(freq Frequency) {
 			Weather:      *weather}
 
 		if err := ss.mailPublisher.Publish(rabbitmq.WeatherUpdate, job); err != nil {
-			log.Printf("Failed to publish weather update for %s: %v", sub.Email, err)
+			logger.GetLogger().Error("Failed to publish weather update",
+				zap.String("email", sub.Email),
+				zap.Error(err))
 		}
 	}
 }
@@ -177,7 +200,9 @@ func (ss *SubscribeService) GetConfirmedSubscriptionsByFrequency(freq Frequency)
 	subs, err := ss.subscriptionRepository.FindByFrequencyAndConfirmation(freq)
 
 	if err != nil {
-		log.Println("Error fetching confirmed subscriptions:", err)
+		logger.GetLogger().Error("Failed to fetch confirmed subscriptions",
+			zap.String("frequency", string(freq)),
+			zap.Error(err))
 		return []Subscription{}
 	}
 

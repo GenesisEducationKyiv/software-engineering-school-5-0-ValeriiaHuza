@@ -1,11 +1,12 @@
 package weather
 
 import (
-	"log"
 	"time"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/redis"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
+	"go.uber.org/zap"
 )
 
 type weatherChain interface {
@@ -36,25 +37,27 @@ func (ws *WeatherService) GetWeather(city string) (*client.WeatherDTO, error) {
 	err := ws.redisProvider.Get(redis.WeatherKey+city, &weatherFromRedis)
 
 	if err == nil {
-		log.Printf("Get weather for %s from Redis : %+v", city, weatherFromRedis)
+		logger.GetLogger().Info("Weather data retrieved from Redis", zap.String("city", city))
 		return &weatherFromRedis, nil
 	}
 
 	// Log Redis errors (not cache misses)
 	if err.Error() != "redis: nil" { // or use redis.Nil constant if available
-		log.Printf("Redis error while fetching weather for %s: %v", city, err)
+		logger.GetLogger().Error("Redis error while fetching weather", zap.String("city", city), zap.Error(err))
+
 	}
 
 	weatherDto, err := ws.weatherChain.GetWeather(city)
 	if err != nil {
-		log.Println("HTTP error in GetWeather :", err)
+		logger.GetLogger().Error("Failed to get weather from chain", zap.String("city", city), zap.Error(err))
+
 		return nil, err
 	}
 
 	err = ws.redisProvider.SetWithTTL(redis.WeatherKey+city, weatherDto, redis.WeatherTTL)
 
 	if err != nil {
-		log.Printf("Failed to save weather in redis %v", err.Error())
+		logger.GetLogger().Error("Failed to save weather in Redis", zap.String("city", city), zap.Error(err))
 	}
 
 	return weatherDto, nil

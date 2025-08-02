@@ -1,36 +1,28 @@
 package logger
 
 import (
-	"io"
-	"log"
-	"os"
+	"go.uber.org/zap"
 )
 
 var (
-	logFile *os.File
+	logger *zap.Logger
 )
 
-func InitLoggerFile(appLogPath string) error {
-	// Close existing log file if open
-	if logFile != nil {
-		_ = logFile.Close()
-	}
-
+func InitZapLogger() error {
 	var err error
-	logFile, err = os.OpenFile(appLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	logger, err = zap.NewProduction()
 	if err != nil {
 		return err
 	}
-
-	// Redirect standard logger to both stdout and file
-	log.SetOutput(io.MultiWriter(os.Stdout, logFile))
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
 	return nil
 }
 
-func CloseLogFile() {
-	if logFile != nil {
-		_ = logFile.Close()
+func Sync() {
+	if logger != nil {
+		_ = logger.Sync()
 	}
+}
+
+func GetLogger() *zap.Logger {
+	return logger
 }

@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/config"
@@ -15,10 +16,13 @@ import (
 
 func Run() error {
 
-	if err := logger.InitLoggerFile("app.log"); err != nil {
-		return fmt.Errorf("failed to init logger: %w", err)
+	if err := logger.InitZapLogger(); err != nil {
+		log.Fatalf("Failed to initialize zap logger: %v", err)
 	}
-	defer logger.CloseLogFile()
+
+	defer logger.Sync()
+
+	logger.GetLogger().Info("Starting Mailer Service...")
 
 	config, err := config.LoadEnvVariables()
 

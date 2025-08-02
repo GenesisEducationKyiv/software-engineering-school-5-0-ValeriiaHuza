@@ -4,12 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
+	"go.uber.org/zap"
 )
 
 type WeatherAPIClient struct {
@@ -31,24 +32,24 @@ func (c *WeatherAPIClient) FetchWeather(city string) (*client.WeatherDTO, error)
 
 	weatherURL := fmt.Sprintf("%s/current.json?key=%s&q=%s", c.apiUrl, c.apiKey, city)
 
-	log.Printf("Sending request to weather API for city: %s", city)
+	logger.GetLogger().Info("Sending request to Weather API", zap.String("city", city), zap.String("url", weatherURL))
 
 	resp, err := c.client.Get(weatherURL)
 
 	if err != nil {
-		log.Printf(" HTTP request failed: %v", err)
+		logger.GetLogger().Error("HTTP request to Weather API failed", zap.Error(err))
 		return nil, err
 	}
 
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			log.Printf("failed to close response body: %v", err)
+			logger.GetLogger().Error("Failed to close response body", zap.Error(err))
 		}
 	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		log.Println("Failed to read response body:", err)
+		logger.GetLogger().Error("Failed to read response body", zap.Error(err))
 		return nil, err
 	}
 
@@ -59,7 +60,7 @@ func (c *WeatherAPIClient) FetchWeather(city string) (*client.WeatherDTO, error)
 	var weather WeatherAPIResponse
 
 	if err := json.Unmarshal(body, &weather); err != nil {
-		log.Println("Failed to parse JSON:", err)
+		logger.GetLogger().Error("Failed to parse JSON response from Weather API", zap.Error(err))
 		return nil, err
 	}
 
@@ -79,7 +80,8 @@ func (ws *WeatherAPIClient) parseAPIError(body []byte) error {
 	}
 
 	if apiErr.Error.Message != "" {
-		log.Printf("Weather API Error %d: %s\n", apiErr.Error.Code, apiErr.Error.Message)
+		logger.GetLogger().Error("Weather API error", zap.String("message", apiErr.Error.Message), zap.Int("code", apiErr.Error.Code))
+
 		if apiErr.Error.Code == 1006 {
 			return client.ErrCityNotFound
 		}

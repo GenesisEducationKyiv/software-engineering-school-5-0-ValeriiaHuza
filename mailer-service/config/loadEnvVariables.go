@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/joho/godotenv"
 	"github.com/kelseyhightower/envconfig"
 )
@@ -25,6 +26,8 @@ type Config struct {
 }
 
 func LoadEnvVariables() (*Config, error) {
+	logger.GetLogger().Info("Loading environment variables...")
+
 	err := godotenv.Load()
 	if err != nil {
 		return nil, fmt.Errorf("no .env file found or error loading it: %w", err)
