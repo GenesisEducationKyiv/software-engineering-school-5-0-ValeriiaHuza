@@ -18,9 +18,6 @@ func MetricsMiddleware() gin.HandlerFunc {
 		status := c.Writer.Status()
 
 		path := c.FullPath()
-		if path == "" {
-			path = "unknown"
-		}
 
 		metrics.GetOrCreateCounter(fmt.Sprintf(
 			`http_requests_total{endpoint="%s", method="%s", status="%d"}`,
