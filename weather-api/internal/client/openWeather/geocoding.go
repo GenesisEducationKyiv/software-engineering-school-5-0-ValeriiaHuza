@@ -35,7 +35,10 @@ func (c *GeocodingClient) GetCityCoordinates(city string) (*Coordinates, error) 
 
 	geocodingURL := fmt.Sprintf("%s/geo/1.0/direct?q=%s&limit=1&appid=%s", c.apiUrl, city, c.apiKey)
 
-	logger.GetLogger().Info("Sending request to OpenWeather Geocoding API", zap.String("city", city), zap.String("url", geocodingURL))
+	logger.GetLogger().Info("Sending request to OpenWeather Geocoding API",
+		zap.String("city", city),
+		zap.String("url", geocodingURL),
+	)
 	resp, err := c.client.Get(geocodingURL)
 
 	if err != nil {

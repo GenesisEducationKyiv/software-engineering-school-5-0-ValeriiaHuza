@@ -32,7 +32,10 @@ func (c *WeatherAPIClient) FetchWeather(city string) (*client.WeatherDTO, error)
 
 	weatherURL := fmt.Sprintf("%s/current.json?key=%s&q=%s", c.apiUrl, c.apiKey, city)
 
-	logger.GetLogger().Info("Sending request to Weather API", zap.String("city", city), zap.String("url", weatherURL))
+	logger.GetLogger().Info("Sending request to Weather API",
+		zap.String("city", city),
+		zap.String("url", weatherURL),
+	)
 
 	resp, err := c.client.Get(weatherURL)
 
