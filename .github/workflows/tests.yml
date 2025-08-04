@@ -1,0 +1,48 @@
+name: Unit and Integration Tests
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  unit-tests:
+    name: 🧪 Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.3'
+
+      - name: Run weather-api unit tests
+        working-directory: weather-api
+        run: go test -v ./... -tags=unit
+
+      - name: Run mailer-service unit tests
+        working-directory: mailer-service
+        run: go test -v ./... -tags=unit
+
+  integration-tests:
+    name: 🧪 Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.3'
+
+      - name: Run weather-api integration tests
+        working-directory: weather-api
+        run: go test -v ./... -tags=integration
