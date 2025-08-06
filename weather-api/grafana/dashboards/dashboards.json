@@ -1,0 +1,159 @@
+{
+  "id": 1,
+  "title": "Weather API Metrics",
+  "schemaVersion": 36,
+  "version": 1,
+  "panels": [
+     {
+    "type": "timeseries",
+    "title": "HTTP Requests Per Minute (excluding /metrics)",
+    "datasource": "Prometheus",
+    "targets": [
+      {
+        "expr": "sum(increase(http_requests_total{endpoint!=\"/metrics\"}[1m]))",
+        "refId": "A"
+      }
+    ],
+    "gridPos": { "h": 6, "w": 24, "x": 0, "y": 0 }
+  },
+  {
+  "type": "timeseries",
+  "title": "HTTP Requests Per Day (excluding /metrics)",
+  "datasource": "Prometheus",
+  "targets": [
+    {
+      "expr": "sum(increase(http_requests_total{endpoint!=\"/metrics\"}[1d]))",
+      "refId": "A"
+    }
+  ],
+  "interval": "1h",
+  "gridPos": { "h": 6, "w": 24, "x": 0, "y": 6 }
+},
+  {
+    "type": "timeseries",
+"title": "HTTP Request Latency (avg)",
+  "datasource": "Prometheus",
+  "targets": [
+    {
+      "expr": "rate(http_request_duration_seconds_sum[1m]) / rate(http_request_duration_seconds_count[1m])",
+      "refId": "A"
+    }
+  ],
+  "gridPos": { "h": 4, "w": 24, "x": 0, "y": 8 }
+  },
+
+  {
+  "type": "timeseries",
+    "title": "Subscriptions Created per 10 Minute",
+  "datasource": "Prometheus",
+  "targets": [
+    {
+      "expr": "increase(http_requests_total{endpoint=\"/api/subscribe\", status=\"200\",method=~\".*\"}[10m])",
+      "refId": "A"
+    }
+  ],
+  "gridPos": {"h": 8, "w": 24, "x": 0, "y": 22
+  }
+}
+,
+{
+  "type": "timeseries",
+  "title": "Subscriptions Confirmed per 10 Minute",
+  "datasource": "Prometheus",
+  "targets": [
+    {
+      "expr": "increase(http_requests_total{endpoint=\"/api/confirm/:token\", status=\"200\",method=~\".*\"}[10m])",
+      "refId": "A"
+    }
+  ],
+  "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 22
+  }
+},
+
+{
+  "type": "timeseries",
+  "title": "Subscriptions Deleted per 10 Minute",
+  "datasource": "Prometheus",
+  "targets": [
+    {
+      "expr": "increase(http_requests_total{endpoint=\"/api/unsubscribe/:token\", status=\"200\",method=~\".*\"}[10m])",
+      "refId": "A"
+    }
+  ],
+  "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 22
+  }
+},
+
+{
+  "type": "timeseries",
+  "title": "Get weather per 10 Minute",
+  "datasource": "Prometheus",
+  "targets": [
+    {
+      "expr": "increase(http_requests_total{endpoint=\"/api/weather\", status=\"200\"}[10m])",
+      "refId": "A"
+    }
+  ],
+  "gridPos": {
+    "h": 8,
+    "w": 24,
+    "x": 0,
+    "y": 22
+  }
+}
+,   {
+    "type": "timeseries",
+    "title": "Goroutines",
+    "datasource": "Prometheus",
+    "targets": [
+      {
+        "expr": "go_goroutines",
+        "refId": "A"
+      }
+    ],
+    "gridPos": { "h": 4, "w": 12, "x": 0, "y": 0 }
+  },
+  {
+    "type": "timeseries",
+    "title": "Memory Usage",
+    "datasource": "Prometheus",
+    "targets": [
+      {
+        "expr": "go_memstats_alloc_bytes",
+        "refId": "A"
+      }
+    ],
+    "gridPos": { "h": 4, "w": 12, "x": 12, "y": 0 },
+    "fieldConfig": {
+      "defaults": {
+        "unit": "bytes"
+      }
+    }
+  },
+  {
+    "type": "timeseries",
+    "title": "CPU Usage (%)",
+    "datasource": "Prometheus",
+    "targets": [
+      {
+        "expr": "rate(process_cpu_seconds_total[1m]) * 100",
+        "refId": "A"
+      }
+    ],
+    "gridPos": { "h": 4, "w": 12, "x": 0, "y": 4 },
+    "fieldConfig": {
+      "defaults": {
+        "unit": "percent"
+      }
+    }
+  }
+  ]
+}

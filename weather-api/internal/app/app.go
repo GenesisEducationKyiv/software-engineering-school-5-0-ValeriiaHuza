@@ -20,7 +20,7 @@ import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/subscription"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/weather"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
-	"github.com/VictoriaMetrics/metrics"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 
 	redisProvider "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/redis"
@@ -111,9 +111,7 @@ func setupRouter() *gin.Engine {
 		c.File("./static/index.html")
 	})
 
-	router.GET("/metrics", func(c *gin.Context) {
-		metrics.WritePrometheus(c.Writer, true)
-	})
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	return router
 }

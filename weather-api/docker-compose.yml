@@ -96,9 +96,44 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     networks:
       - weather-net
-      
+
+  victoriametrics:
+    image: victoriametrics/victoria-metrics:latest
+    container_name: victoriametrics
+    ports:
+      - "8428:8428"
+    command:
+      - '--retentionPeriod=30d'
+    networks:
+      - weather-net
+
+  vmagent:
+    image: victoriametrics/vmagent:latest
+    container_name: vmagent
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--promscrape.config=/etc/prometheus/prometheus.yml'
+      - '--remoteWrite.url=http://victoriametrics:8428/api/v1/write'
+      - '--promscrape.config.strictParse=false'
+    networks:
+      - weather-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      - ./grafana:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    networks:
+      - weather-net  
+
 volumes:
   db:
+  grafana-storage:
   
   redis-data:
     driver: local

@@ -4,31 +4,43 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/VictoriaMetrics/metrics"
 	"github.com/gin-gonic/gin"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+var (
+	httpRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total HTTP requests",
+		},
+		[]string{"endpoint", "method", "status"},
+	)
+	httpRequestDurationSeconds = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "HTTP request durations",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"endpoint", "method"},
+	)
 )
 
 func MetricsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-
 		c.Next()
-
 		duration := time.Since(start).Seconds()
 		status := c.Writer.Status()
-
 		path := c.FullPath()
 
-		metrics.GetOrCreateCounter(fmt.Sprintf(
-			`http_requests_total{endpoint="%s", method="%s", status="%d"}`,
-			path, c.Request.Method, status,
-		)).Inc()
+		if path == "" {
+			path = "unknown"
+		}
 
-		metrics.GetOrCreateCounter(`http_requests_total_all`).Inc()
+		httpRequestsTotal.WithLabelValues(path, c.Request.Method, fmt.Sprintf("%d", status)).Inc()
+		httpRequestDurationSeconds.WithLabelValues(path, c.Request.Method).Observe(duration)
 
-		metrics.GetOrCreateHistogram(fmt.Sprintf(
-			`http_request_duration_seconds{endpoint="%s", method="%s"}`,
-			path, c.Request.Method,
-		)).Update(duration)
 	}
 }
