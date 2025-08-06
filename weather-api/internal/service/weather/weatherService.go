@@ -27,7 +27,8 @@ type WeatherService struct {
 	logger        loggerInterface
 }
 
-func NewWeatherAPIService(weatherChain weatherChain, redisProvider redisProvider, logger loggerInterface) *WeatherService {
+func NewWeatherAPIService(weatherChain weatherChain, redisProvider redisProvider,
+	logger loggerInterface) *WeatherService {
 	return &WeatherService{
 		weatherChain:  weatherChain,
 		redisProvider: redisProvider,

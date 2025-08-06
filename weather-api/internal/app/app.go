@@ -43,7 +43,11 @@ func Run() error {
 		log.Fatalf("Failed to initialize zap logger: %v", err)
 	}
 
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			fmt.Printf("Error syncing logger: %v\n", err)
+		}
+	}()
 
 	logger.Info("Starting Weather Api Service...")
 
@@ -168,8 +172,10 @@ func buildWeatherResponsibilityChain(config config.Config, logger loggerInterfac
 
 	geocoding := openweather.NewGeocodingClient(config.OpenWeatherKey, config.OpenWeatherUrl, &http, logger)
 
-	weatherApiClient := weatherapi.NewWeatherAPIClient(config.WeatherAPIKey, config.WeatherAPIUrl, &http, logger)
-	openWeatherClient := openweather.NewWeatherAPIClient(config.OpenWeatherKey, config.OpenWeatherUrl, geocoding, &http, logger)
+	weatherApiClient := weatherapi.NewWeatherAPIClient(config.WeatherAPIKey,
+		config.WeatherAPIUrl, &http, logger)
+	openWeatherClient := openweather.NewWeatherAPIClient(config.OpenWeatherKey,
+		config.OpenWeatherUrl, geocoding, &http, logger)
 
 	weatherApiChain := client.NewWeatherChain(weatherApiClient, logger)
 	openWeatherChain := client.NewWeatherChain(openWeatherClient, logger)

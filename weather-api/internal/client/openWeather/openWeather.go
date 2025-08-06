@@ -23,7 +23,9 @@ type WeatherAPIClient struct {
 	logger    loggerInterface
 }
 
-func NewWeatherAPIClient(apiKey string, apiUrl string, geocoding geocodingClient, http *http.Client, logger loggerInterface) *WeatherAPIClient {
+func NewWeatherAPIClient(apiKey string, apiUrl string,
+	geocoding geocodingClient, http *http.Client,
+	logger loggerInterface) *WeatherAPIClient {
 	return &WeatherAPIClient{
 		apiKey:    apiKey,
 		geocoding: geocoding,
