@@ -116,6 +116,9 @@ services:
       - '--promscrape.config=/etc/prometheus/prometheus.yml'
       - '--remoteWrite.url=http://victoriametrics:8428/api/v1/write'
       - '--promscrape.config.strictParse=false'
+    depends_on:
+      victoriametrics:
+        condition: service_started 
     networks:
       - weather-net
 
