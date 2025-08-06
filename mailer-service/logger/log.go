@@ -1,32 +1,57 @@
 package logger
 
 import (
+	"os"
+	"time"
+
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-var (
-	logger *zap.Logger
-)
-
-func InitZapLogger() error {
-	var err error
-	logger, err = zap.NewProduction()
-	if err != nil {
-		return err
-	}
-	return nil
+type logger struct {
+	logger *zap.SugaredLogger
 }
 
-func Sync() {
-	if logger != nil {
-		_ = logger.Sync()
-	}
+func NewLogger() (*logger, error) {
+	encoderCfg := zap.NewProductionEncoderConfig()
+	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoder := zapcore.NewJSONEncoder(encoderCfg)
+
+	writer := zapcore.Lock(os.Stdout)
+
+	logLevel := zapcore.InfoLevel
+	core := zapcore.NewCore(encoder, writer, logLevel)
+
+	// Wrap the core with sampling
+	sampledCore := zapcore.NewSamplerWithOptions(
+		core,
+		// Sampling window (1 second here)
+		// meaning it resets counters every second
+		time.Second,
+		100, // first 100 logs per second are logged
+		10,  // then 1 every 10 is logged
+	)
+
+	// Create a new logger using the sampled core
+	zapLogger := zap.New(sampledCore, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
+
+	return &logger{
+		logger: zapLogger.Sugar(),
+	}, nil
 }
 
-func GetLogger() *zap.Logger {
-	return logger
+func (l *logger) Info(msg string, keysAndValues ...any) {
+	l.logger.Infow(msg, keysAndValues...)
 }
 
-func InitTestLogger() {
-	logger = zap.NewExample()
+func (l *logger) Error(msg string, keysAndValues ...any) {
+	l.logger.Errorw(msg, keysAndValues...)
+}
+
+func (l *logger) Debug(msg string, keysAndValues ...any) {
+	l.logger.Debugw(msg, keysAndValues...)
+}
+
+func (l *logger) Sync() error {
+	return l.logger.Sync()
 }

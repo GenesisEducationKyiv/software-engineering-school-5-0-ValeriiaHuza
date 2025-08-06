@@ -1,9 +1,9 @@
 package client
 
-import (
-	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
-	"go.uber.org/zap"
-)
+type loggerInterface interface {
+	Info(msg string, keysAndValues ...any)
+	Error(msg string, keysAndValues ...any)
+}
 
 type weatherProvider interface {
 	FetchWeather(city string) (*WeatherDTO, error)
@@ -17,15 +17,17 @@ type weatherChainProvider interface {
 type WeatherChain struct {
 	next     weatherChainProvider
 	provider weatherProvider
+	logger   loggerInterface
 }
 
 func (h *WeatherChain) SetNext(provider weatherChainProvider) {
 	h.next = provider
 }
 
-func NewWeatherChain(provider weatherProvider) *WeatherChain {
+func NewWeatherChain(provider weatherProvider, logger loggerInterface) *WeatherChain {
 	return &WeatherChain{
 		provider: provider,
+		logger:   logger,
 	}
 }
 
@@ -35,13 +37,13 @@ func (c *WeatherChain) GetWeather(city string) (*WeatherDTO, error) {
 		return weather, nil
 	}
 
-	logger.GetLogger().Error("Weather provider error. Trying next provider...", zap.String("city", city), zap.Error(err))
+	c.logger.Error("Weather provider error. Trying next provider... ", "city", city, "error", err)
 
 	if c.next != nil {
 		return c.next.GetWeather(city)
 	}
 
-	logger.GetLogger().Error("All weather providers failed", zap.String("city", city), zap.Error(err))
+	c.logger.Error("All weather providers failed", "city", city, "error", err)
 
 	return nil, err
 }

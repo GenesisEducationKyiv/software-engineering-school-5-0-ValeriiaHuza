@@ -5,10 +5,13 @@ import (
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/rabbitmq"
-	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/google/uuid"
-	"go.uber.org/zap"
 )
+
+type loggerInterface interface {
+	Info(msg string, keysAndValues ...any)
+	Error(msg string, keysAndValues ...any)
+}
 
 type mailPublisher interface {
 	Publish(queue string, payload any) error
@@ -31,15 +34,17 @@ type SubscribeService struct {
 	weatherService         weatherService
 	subscriptionRepository subscriptionRepository
 	mailPublisher          mailPublisher
+	logger                 loggerInterface
 }
 
 func NewSubscribeService(weatherService weatherService,
 	repository subscriptionRepository,
-	mailPublisher mailPublisher) *SubscribeService {
+	mailPublisher mailPublisher, logger loggerInterface) *SubscribeService {
 	return &SubscribeService{
 		weatherService:         weatherService,
 		subscriptionRepository: repository,
 		mailPublisher:          mailPublisher,
+		logger:                 logger,
 	}
 }
 
@@ -50,10 +55,10 @@ func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
 		return err
 	}
 
-	logger.GetLogger().Info("Subscribing for weather updates",
-		zap.String("email", email),
-		zap.String("city", city),
-		zap.String("frequency", string(frequency)))
+	ss.logger.Info("Validating subscription input",
+		"email", email,
+		"city", city,
+		"frequency", frequency)
 
 	subscribed := ss.emailSubscribed(email)
 	if subscribed {
@@ -70,14 +75,13 @@ func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
 	}
 
 	if err := ss.subscriptionRepository.Create(newSubscription); err != nil {
-		logger.GetLogger().Error("Failed to create subscription",
-			zap.String("email", email),
-			zap.Error(err))
+		ss.logger.Error("Failed to create subscription",
+			"email", email,
+			"error", err)
 		return ErrFailedToSaveSubscription
 	}
 
-	logger.GetLogger().Info("Subscription created",
-		zap.String("email", email))
+	ss.logger.Info("Subscription created", "email", email)
 
 	job := EmailJob{
 		To:           newSubscription.Email,
@@ -88,14 +92,13 @@ func (ss *SubscribeService) SubscribeForWeatherUpdates(email string,
 	err := ss.mailPublisher.Publish(rabbitmq.SendEmail, job)
 
 	if err != nil {
-		logger.GetLogger().Error("Failed to publish email job",
-			zap.String("email", newSubscription.Email),
-			zap.Error(err))
+		ss.logger.Error("Failed to publish email job",
+			"email", newSubscription.Email,
+			"error", err)
 		return errors.New("failed to publish email job")
 	}
 
-	logger.GetLogger().Info("Confirmation email sent",
-		zap.String("email", email))
+	ss.logger.Info("Subscription email job published", "email", email)
 
 	return nil
 }
@@ -111,9 +114,9 @@ func (ss *SubscribeService) ConfirmSubscription(token string) error {
 	sub.Confirmed = true
 
 	if err := ss.subscriptionRepository.Update(*sub); err != nil {
-		logger.GetLogger().Error("Failed to update subscription",
-			zap.String("token", token),
-			zap.Error(err))
+		ss.logger.Error("Failed to update subscription",
+			"token", token,
+			"error", err)
 
 		return ErrFailedToSaveSubscription
 	}
@@ -127,9 +130,9 @@ func (ss *SubscribeService) ConfirmSubscription(token string) error {
 	err = ss.mailPublisher.Publish(rabbitmq.SendEmail, job)
 
 	if err != nil {
-		logger.GetLogger().Error("Failed to publish email job",
-			zap.String("email", sub.Email),
-			zap.Error(err))
+		ss.logger.Error("Failed to publish confirmation email job",
+			"email", sub.Email,
+			"error", err)
 		return errors.New("failed to publish email job")
 	}
 
@@ -149,9 +152,10 @@ func (ss *SubscribeService) Unsubscribe(token string) error {
 	}
 
 	if err := ss.subscriptionRepository.Delete(*sub); err != nil {
-		logger.GetLogger().Error("Failed to delete subscription",
-			zap.String("token", token),
-			zap.Error(err))
+		ss.logger.Error("Failed to delete subscription",
+			"token", token,
+			"error", err)
+
 		return ErrInvalidInput
 	}
 
@@ -170,16 +174,16 @@ func (ss *SubscribeService) generateToken() string {
 
 func (ss *SubscribeService) SendSubscriptionEmails(freq Frequency) {
 	subs := ss.GetConfirmedSubscriptionsByFrequency(freq)
-	logger.GetLogger().Info("Sending subscription emails",
-		zap.String("frequency", string(freq)),
-		zap.Int("count", len(subs)))
+	ss.logger.Info("Sending subscription emails",
+		"frequency", string(freq),
+		"count", len(subs))
 
 	for _, sub := range subs {
 		weather, err := ss.weatherService.GetWeather(sub.City)
 		if err != nil {
-			logger.GetLogger().Error("Failed to fetch weather data",
-				zap.String("city", sub.City),
-				zap.Error(err))
+			ss.logger.Error("Failed to fetch weather data",
+				"city", sub.City,
+				"error", err)
 			continue
 		}
 
@@ -189,9 +193,9 @@ func (ss *SubscribeService) SendSubscriptionEmails(freq Frequency) {
 			Weather:      *weather}
 
 		if err := ss.mailPublisher.Publish(rabbitmq.WeatherUpdate, job); err != nil {
-			logger.GetLogger().Error("Failed to publish weather update",
-				zap.String("email", sub.Email),
-				zap.Error(err))
+			ss.logger.Error("Failed to publish weather update",
+				"email", sub.Email,
+				"error", err)
 		}
 	}
 }
@@ -200,9 +204,9 @@ func (ss *SubscribeService) GetConfirmedSubscriptionsByFrequency(freq Frequency)
 	subs, err := ss.subscriptionRepository.FindByFrequencyAndConfirmation(freq)
 
 	if err != nil {
-		logger.GetLogger().Error("Failed to fetch confirmed subscriptions",
-			zap.String("frequency", string(freq)),
-			zap.Error(err))
+		ss.logger.Error("Failed to fetch confirmed subscriptions",
+			"frequency", string(freq),
+			"error", err)
 		return []Subscription{}
 	}
 

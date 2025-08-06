@@ -1,16 +1,15 @@
 package rabbitmq
 
 import (
-	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/rabbitmq/amqp091-go"
-	"go.uber.org/zap"
 )
 
 type RabbitMQConsumer struct {
 	channel *amqp091.Channel
+	logger  loggerInterface
 }
 
-func NewRabbitMQConsumer(channel *amqp091.Channel) *RabbitMQConsumer {
+func NewRabbitMQConsumer(channel *amqp091.Channel, logger loggerInterface) *RabbitMQConsumer {
 	return &RabbitMQConsumer{channel: channel}
 }
 
@@ -25,7 +24,7 @@ func (c *RabbitMQConsumer) Consume(queue string, handler func(body []byte)) {
 		nil,
 	)
 	if err != nil {
-		logger.GetLogger().Error("Failed to register a consumer", zap.Error(err))
+		c.logger.Error("Failed to register a consumer", "error", err)
 		return
 	}
 
@@ -33,7 +32,7 @@ func (c *RabbitMQConsumer) Consume(queue string, handler func(body []byte)) {
 		for msg := range msgs {
 			handler(msg.Body)
 			if err := msg.Ack(false); err != nil {
-				logger.GetLogger().Error("Failed to ack message", zap.Error(err))
+				c.logger.Error("Failed to ack message", "error", err)
 			}
 		}
 	}()

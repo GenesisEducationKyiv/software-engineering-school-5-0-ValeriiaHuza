@@ -1,35 +1,40 @@
 package rabbitmq
 
 import (
-	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/rabbitmq/amqp091-go"
-	"go.uber.org/zap"
 )
+
+type loggerInterface interface {
+	Info(msg string, args ...any)
+	Error(msg string, args ...any)
+}
 
 type RabbitMQ struct {
 	Conn    *amqp091.Connection
 	Channel *amqp091.Channel
+	logger  loggerInterface
 }
 
-func ConnectToRabbitMQ(connectionUrl string) (*RabbitMQ, error) {
+func ConnectToRabbitMQ(connectionUrl string, logger loggerInterface) (*RabbitMQ, error) {
 	conn, err := amqp091.Dial(connectionUrl)
 	if err != nil {
-		logger.GetLogger().Error("Failed to connect to RabbitMQ", zap.Error(err))
+		logger.Error("Failed to connect to RabbitMQ", "error", err)
 		return nil, err
 	}
 
 	ch, err := conn.Channel()
 	if err != nil {
-		logger.GetLogger().Error("Failed to open a RabbitMQ channel", zap.Error(err))
+		logger.Error("Failed to open a RabbitMQ channel", "error", err)
 		conn.Close() // Clean up the connection
 		return nil, err
 	}
 	rabbitMQ := &RabbitMQ{
 		Conn:    conn,
 		Channel: ch,
+		logger:  logger,
 	}
 
-	logger.GetLogger().Info("Connected to RabbitMQ successfully")
+	logger.Info("Connected to RabbitMQ successfully")
 
 	return rabbitMQ, nil
 }
@@ -37,13 +42,13 @@ func ConnectToRabbitMQ(connectionUrl string) (*RabbitMQ, error) {
 func (r *RabbitMQ) Close() error {
 	if r.Channel != nil {
 		if err := r.Channel.Close(); err != nil {
-			logger.GetLogger().Error("Failed to close RabbitMQ channel", zap.Error(err))
+			r.logger.Error("Failed to close RabbitMQ channel", "error", err)
 			return err
 		}
 	}
 	if r.Conn != nil {
 		if err := r.Conn.Close(); err != nil {
-			logger.GetLogger().Error("Failed to close RabbitMQ connection", zap.Error(err))
+			r.logger.Error("Failed to close RabbitMQ connection", "error", err)
 			return err
 		}
 	}

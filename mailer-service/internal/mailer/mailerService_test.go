@@ -12,10 +12,6 @@ import (
 	"gopkg.in/gomail.v2"
 )
 
-func init() {
-	logger.InitTestLogger()
-}
-
 // --- Mocks ---
 
 type mockEmailBuilder struct {
@@ -49,7 +45,8 @@ func (m *mockDialer) DialAndSend(msg ...*gomail.Message) error {
 func setupMailerTest(t *testing.T) (*mockEmailBuilder, *mockDialer, *MailService) {
 	builder := new(mockEmailBuilder)
 	dialer := new(mockDialer)
-	ms := NewMailerService("test@example.com", dialer, builder)
+	mockLog, _ := logger.NewLogger()
+	ms := NewMailerService("test@example.com", dialer, builder, mockLog)
 	return builder, dialer, ms
 }
 

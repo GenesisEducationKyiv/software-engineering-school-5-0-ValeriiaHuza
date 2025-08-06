@@ -6,17 +6,22 @@ import (
 	"time"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/internal/mailer"
-	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
-	"go.uber.org/zap"
 )
+
+type loggerInterface interface {
+	Info(msg string, keysAndValues ...any)
+	Error(msg string, keysAndValues ...any)
+}
 
 type WeatherEmailBuilder struct {
 	appUrl string
+	logger loggerInterface
 }
 
-func NewWeatherEmailBuilder(appUrl string) *WeatherEmailBuilder {
+func NewWeatherEmailBuilder(appUrl string, logger loggerInterface) *WeatherEmailBuilder {
 	return &WeatherEmailBuilder{
 		appUrl: appUrl,
+		logger: logger,
 	}
 }
 
@@ -51,7 +56,7 @@ func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(
 func (w *WeatherEmailBuilder) BuildConfirmationEmail(sub mailer.SubscriptionDTO) string {
 	confirmationLink := w.buildURL("/api/confirm/") + sub.Token
 
-	logger.GetLogger().Info("Building confirmation email", zap.String("confirmationLink", confirmationLink))
+	w.logger.Info("Building confirmation email", "confirmationLink", confirmationLink)
 
 	escapedCity := html.EscapeString(sub.City)
 
@@ -74,6 +79,6 @@ func (w *WeatherEmailBuilder) BuildConfirmSuccessEmail(sub mailer.SubscriptionDT
 }
 
 func (w *WeatherEmailBuilder) buildURL(path string) string {
-	logger.GetLogger().Info("Building URL", zap.String("appUrl", w.appUrl), zap.String("path", path))
+	w.logger.Info("Building URL", "appUrl", w.appUrl, "path", path)
 	return w.appUrl + path
 }

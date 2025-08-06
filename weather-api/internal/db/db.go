@@ -2,26 +2,29 @@ package db
 
 import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/config"
-	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
-	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func ConnectToDatabase(config config.Config) (*gorm.DB, error) {
+type loggerInterface interface {
+	Info(msg string, keysAndValues ...any)
+	Error(msg string, keysAndValues ...any)
+}
+
+func ConnectToDatabase(config config.Config, logger loggerInterface) (*gorm.DB, error) {
 
 	dsn := config.GetDSNString()
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		logger.GetLogger().Error("Failed to connect to database", zap.Error(err))
+		logger.Error("Failed to connect to database", "error", err)
 		return nil, err
 	}
 
-	logger.GetLogger().Info("Connected to database", zap.String("dsn", dsn))
+	logger.Info("Connected to database", "dsn", dsn)
 
 	if err := AutomatedMigration(db); err != nil {
-		logger.GetLogger().Error("Failed to run database migrations", zap.Error(err))
+		logger.Error("Failed to run database migrations", "error", err)
 		return nil, err
 	}
 

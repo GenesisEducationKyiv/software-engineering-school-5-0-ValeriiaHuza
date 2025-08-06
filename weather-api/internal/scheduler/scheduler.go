@@ -2,10 +2,13 @@ package scheduler
 
 import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/subscription"
-	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/robfig/cron/v3"
-	"go.uber.org/zap"
 )
+
+type loggerInterface interface {
+	Info(msg string, keysAndValues ...any)
+	Error(msg string, keysAndValues ...any)
+}
 
 type subscribeService interface {
 	SendSubscriptionEmails(freq subscription.Frequency)
@@ -13,11 +16,13 @@ type subscribeService interface {
 
 type Scheduler struct {
 	subscribeService subscribeService
+	logger           loggerInterface
 }
 
-func NewScheduler(subscribeService subscribeService) *Scheduler {
+func NewScheduler(subscribeService subscribeService, logger loggerInterface) *Scheduler {
 	return &Scheduler{
 		subscribeService: subscribeService,
+		logger:           logger,
 	}
 }
 
@@ -28,14 +33,15 @@ func (ss *Scheduler) StartCronJobs() {
 	if _, err := c.AddFunc("0 9 * * *", func() {
 		ss.subscribeService.SendSubscriptionEmails(subscription.FrequencyDaily)
 	}); err != nil {
-		logger.GetLogger().Error("Failed to schedule daily job", zap.Error(err))
+		ss.logger.Error("Failed to schedule daily job", "error", err)
+
 	}
 
 	// Every hour
 	if _, err := c.AddFunc("0 * * * *", func() {
 		ss.subscribeService.SendSubscriptionEmails(subscription.FrequencyHourly)
 	}); err != nil {
-		logger.GetLogger().Error("Failed to schedule hourly job", zap.Error(err))
+		ss.logger.Error("Failed to schedule hourly job", "error", err)
 	}
 
 	c.Start()

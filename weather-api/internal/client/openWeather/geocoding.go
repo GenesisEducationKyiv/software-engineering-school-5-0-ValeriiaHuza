@@ -11,21 +11,26 @@ import (
 	"strings"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
-	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
-	"go.uber.org/zap"
 )
+
+type loggerInterface interface {
+	Info(msg string, keysAndValues ...any)
+	Error(msg string, keysAndValues ...any)
+}
 
 type GeocodingClient struct {
 	apiKey string
 	apiUrl string
 	client *http.Client
+	logger loggerInterface
 }
 
-func NewGeocodingClient(apiKey string, apiUrl string, http *http.Client) *GeocodingClient {
+func NewGeocodingClient(apiKey string, apiUrl string, http *http.Client, logger loggerInterface) *GeocodingClient {
 	return &GeocodingClient{
 		apiKey: apiKey,
 		apiUrl: strings.TrimRight(apiUrl, "/"),
 		client: http,
+		logger: logger,
 	}
 }
 
@@ -35,41 +40,37 @@ func (c *GeocodingClient) GetCityCoordinates(city string) (*Coordinates, error) 
 
 	geocodingURL := fmt.Sprintf("%s/geo/1.0/direct?q=%s&limit=1&appid=%s", c.apiUrl, city, c.apiKey)
 
-	logger.GetLogger().Info("Sending request to OpenWeather Geocoding API",
-		zap.String("city", city),
-		zap.String("url", geocodingURL),
-	)
+	c.logger.Info("Sending request to OpenWeather Geocoding API", "city", city, "url", geocodingURL)
 	resp, err := c.client.Get(geocodingURL)
 
 	if err != nil {
-		logger.GetLogger().Error("HTTP request to OpenWeather Geocoding failed", zap.Error(err))
+		c.logger.Error("HTTP request to OpenWeather Geocoding failed", "error", err)
+
 		return nil, err
 	}
 
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			logger.GetLogger().Error("Failed to close response body", zap.Error(err))
+			c.logger.Error("Failed to close response body", "error", err)
 		}
 	}()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.GetLogger().Error("Failed to read geocoding response body", zap.Error(err))
+		c.logger.Error("Failed to read geocoding response body", "error", err)
 		return nil, err
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		logger.GetLogger().Error("Geocoding API returned non-200 status code",
-			zap.Int("statusCode", resp.StatusCode),
-			zap.String("responseBody", string(body)),
-		)
+		c.logger.Error("Geocoding API returned non-200 status code",
+			"statusCode", resp.StatusCode, "body", string(body))
 		return nil, errors.New("could not get city coordinates")
 	}
 
 	var geocoding []Coordinates
 
 	if err := json.Unmarshal(body, &geocoding); err != nil {
-		logger.GetLogger().Error("Failed to parse JSON response from Geocoding API", zap.Error(err))
+		c.logger.Error("Failed to parse JSON response from Geocoding API", "error", err)
 		return nil, err
 	}
 
