@@ -7,6 +7,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/rabbitmq"
 	"github.com/stretchr/testify/assert"
@@ -77,11 +78,13 @@ func TestSubscribeForWeatherUpdates_Success(t *testing.T) {
 	mockRepo.On("FindByEmail", "test@example.com").Return(nil, errors.New("record not found"))
 	mockRepo.On("Create", mock.AnythingOfType("Subscription")).Return(nil)
 	mockPublisher.On("Publish", rabbitmq.SendEmail, mock.AnythingOfType("EmailJob")).Return(nil)
+	mockLogger, _ := logger.NewLogger()
 
 	service := &SubscribeService{
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	email := "test@example.com"
@@ -101,11 +104,12 @@ func TestSubscribeForWeatherUpdates_WeatherServiceError(t *testing.T) {
 	mockRepo := new(mockSubscriptionRepository)
 
 	mockWeather.On("GetWeather", "Kyiv").Return(nil, errors.New("weather error"))
-
+	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
@@ -123,11 +127,13 @@ func TestSubscribeForWeatherUpdates_EmailAlreadySubscribed(t *testing.T) {
 
 	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{}, nil)
 	mockRepo.On("FindByEmail", "test@example.com").Return(&Subscription{Email: "test@example.com"}, nil)
+	mockLogger, _ := logger.NewLogger()
 
 	service := &SubscribeService{
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
@@ -147,11 +153,13 @@ func TestSubscribeForWeatherUpdates_CreateError(t *testing.T) {
 	mockWeather.On("GetWeather", "Kyiv").Return(&client.WeatherDTO{}, nil)
 	mockRepo.On("FindByEmail", "test@example.com").Return(nil, errors.New("record not found"))
 	mockRepo.On("Create", mock.AnythingOfType("Subscription")).Return(errors.New("db error"))
+	mockLogger, _ := logger.NewLogger()
 
 	service := &SubscribeService{
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
@@ -179,9 +187,12 @@ func TestConfirmSubscription_Success(t *testing.T) {
 
 	mockPublisher.On("Publish", rabbitmq.SendEmail, mock.AnythingOfType("EmailJob")).Return(nil)
 
+	mockLogger, _ := logger.NewLogger()
+
 	service := &SubscribeService{
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	err := service.ConfirmSubscription("token123")
@@ -195,10 +206,12 @@ func TestConfirmSubscription_TokenNotFound(t *testing.T) {
 	mockPublisher := new(mockMailPublisher)
 
 	mockRepo.On("FindByToken", "invalid-token").Return(nil, errors.New("not found"))
+	mockLogger, _ := logger.NewLogger()
 
 	service := &SubscribeService{
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	err := service.ConfirmSubscription("invalid-token")
@@ -221,10 +234,12 @@ func TestConfirmSubscription_UpdateError(t *testing.T) {
 
 	mockRepo.On("FindByToken", "token123").Return(mockSub, nil)
 	mockRepo.On("Update", mock.AnythingOfType("Subscription")).Return(errors.New("update error"))
+	mockLogger, _ := logger.NewLogger()
 
 	service := &SubscribeService{
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	err := service.ConfirmSubscription("token123")
@@ -245,9 +260,10 @@ func TestUnsubscribe_Success(t *testing.T) {
 
 	mockRepo.On("FindByToken", "token123").Return(mockSub, nil)
 	mockRepo.On("Delete", *mockSub).Return(nil)
-
+	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	err := service.Unsubscribe("token123")
@@ -258,9 +274,10 @@ func TestUnsubscribe_Success(t *testing.T) {
 func TestUnsubscribe_TokenNotFound(t *testing.T) {
 	mockRepo := new(mockSubscriptionRepository)
 	mockRepo.On("FindByToken", "invalid-token").Return(nil, errors.New("not found"))
-
+	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	err := service.Unsubscribe("invalid-token")
@@ -274,8 +291,10 @@ func TestUnsubscribe_SubscriptionNil(t *testing.T) {
 	mockRepo := new(mockSubscriptionRepository)
 	mockRepo.On("FindByToken", "token123").Return(nil, nil)
 
+	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	err := service.Unsubscribe("token123")
@@ -297,9 +316,11 @@ func TestUnsubscribe_DeleteError(t *testing.T) {
 
 	mockRepo.On("FindByToken", "token123").Return(mockSub, nil)
 	mockRepo.On("Delete", *mockSub).Return(errors.New("delete error"))
+	mockLogger, _ := logger.NewLogger()
 
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	err := service.Unsubscribe("token123")
@@ -309,9 +330,11 @@ func TestUnsubscribe_DeleteError(t *testing.T) {
 func TestEmailSubscribed_ReturnsTrueWhenSubscribed(t *testing.T) {
 	mockRepo := new(mockSubscriptionRepository)
 	mockRepo.On("FindByEmail", "test@example.com").Return(&Subscription{Email: "test@example.com"}, nil)
+	mockLogger, _ := logger.NewLogger()
 
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	subscribed := service.emailSubscribed("test@example.com")
@@ -323,9 +346,10 @@ func TestEmailSubscribed_ReturnsTrueWhenSubscribed(t *testing.T) {
 func TestEmailSubscribed_ReturnsError(t *testing.T) {
 	mockRepo := new(mockSubscriptionRepository)
 	mockRepo.On("FindByEmail", "test@example.com").Return(nil, errors.New("db error"))
-
+	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	subscribed := service.emailSubscribed("test@example.com")
@@ -341,9 +365,10 @@ func TestGetConfirmedSubscriptionsByFrequency_ReturnsSubscriptions(t *testing.T)
 		{Email: "b@example.com", City: "Lviv", Frequency: Frequency("daily"), Confirmed: true},
 	}
 	mockRepo.On("FindByFrequencyAndConfirmation", Frequency("daily")).Return(expectedSubs, nil)
-
+	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	result := service.GetConfirmedSubscriptionsByFrequency(Frequency("daily"))
@@ -354,9 +379,10 @@ func TestGetConfirmedSubscriptionsByFrequency_ReturnsSubscriptions(t *testing.T)
 func TestGetConfirmedSubscriptionsByFrequency_RepoError_ReturnsEmptySlice(t *testing.T) {
 	mockRepo := new(mockSubscriptionRepository)
 	mockRepo.On("FindByFrequencyAndConfirmation", Frequency("daily")).Return(nil, errors.New("db error"))
-
+	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	result := service.GetConfirmedSubscriptionsByFrequency(Frequency("daily"))
@@ -368,6 +394,7 @@ func TestSendSubscriptionEmails_SendsEmails(t *testing.T) {
 	mockRepo := new(mockSubscriptionRepository)
 	mockWeather := new(mockWeatherService)
 	mockPublisher := new(mockMailPublisher)
+	mockLogger, _ := logger.NewLogger()
 
 	subs := []Subscription{
 		{Email: "test1@example.com", City: "Kyiv", Frequency: Frequency("daily"), Confirmed: true},
@@ -386,6 +413,7 @@ func TestSendSubscriptionEmails_SendsEmails(t *testing.T) {
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	service.SendSubscriptionEmails(Frequency("daily"))
@@ -404,11 +432,13 @@ func TestSendSubscriptionEmails_WeatherError_SkipsEmail(t *testing.T) {
 	}
 	mockRepo.On("FindByFrequencyAndConfirmation", Frequency("daily")).Return(subs, nil)
 	mockWeather.On("GetWeather", "Kyiv").Return(nil, errors.New("weather error"))
+	mockLogger, _ := logger.NewLogger()
 
 	service := &SubscribeService{
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
+		logger:                 mockLogger,
 	}
 
 	service.SendSubscriptionEmails(Frequency("daily"))
