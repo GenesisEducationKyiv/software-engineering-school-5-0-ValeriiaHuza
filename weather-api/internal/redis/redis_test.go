@@ -58,7 +58,7 @@ func TestSet_Success(t *testing.T) {
 	mockClient := new(mockRedisClient)
 	ctx := context.Background()
 
-	mockLog, _ := logger.NewLogger()
+	mockLog, _ := logger.NewTestLogger()
 	provider := NewRedisProvider(mockClient, ctx, *mockLog)
 
 	val := map[string]string{"foo": "bar"}
@@ -74,7 +74,7 @@ func TestSetWithTTL_Success(t *testing.T) {
 	mockClient := new(mockRedisClient)
 	ctx := context.Background()
 
-	mockLog, _ := logger.NewLogger()
+	mockLog, _ := logger.NewTestLogger()
 	provider := NewRedisProvider(mockClient, ctx, *mockLog)
 
 	val := map[string]string{"foo": "bar"}
@@ -91,7 +91,7 @@ func TestGet_Success(t *testing.T) {
 	mockClient := new(mockRedisClient)
 	ctx := context.Background()
 
-	mockLog, _ := logger.NewLogger()
+	mockLog, _ := logger.NewTestLogger()
 	provider := NewRedisProvider(mockClient, ctx, *mockLog)
 
 	val := map[string]string{"foo": "bar"}
@@ -109,7 +109,7 @@ func TestGet_Error(t *testing.T) {
 	mockClient := new(mockRedisClient)
 	ctx := context.Background()
 
-	mockLog, _ := logger.NewLogger()
+	mockLog, _ := logger.NewTestLogger()
 	provider := NewRedisProvider(mockClient, ctx, *mockLog)
 
 	mockClient.On("Get", ctx, "key4").Return("", errors.New("not found"))
@@ -124,7 +124,7 @@ func TestDelete_Success(t *testing.T) {
 	mockClient := new(mockRedisClient)
 	ctx := context.Background()
 
-	mockLog, _ := logger.NewLogger()
+	mockLog, _ := logger.NewTestLogger()
 	provider := NewRedisProvider(mockClient, ctx, *mockLog)
 
 	mockClient.On("Del", ctx, []string{"key5"}).Return(nil)
@@ -138,7 +138,7 @@ func TestDelete_Error(t *testing.T) {
 	mockClient := new(mockRedisClient)
 	ctx := context.Background()
 
-	mockLog, _ := logger.NewLogger()
+	mockLog, _ := logger.NewTestLogger()
 	provider := NewRedisProvider(mockClient, ctx, *mockLog)
 
 	mockClient.On("Del", ctx, []string{"key6"}).Return(errors.New("del error"))

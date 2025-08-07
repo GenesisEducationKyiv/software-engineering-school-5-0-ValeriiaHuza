@@ -36,7 +36,7 @@ var (
 func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, func()) {
 	ctx := context.Background()
 
-	logger, err := logger.NewLogger()
+	logger, err := logger.NewTestLogger()
 
 	if err != nil {
 		log.Fatalf("Failed to initialize logger: %v", err)

@@ -62,7 +62,7 @@ func TestGetWeather_Success(t *testing.T) {
 	mockRedis.On("Get", "weather:Kyiv", mock.Anything).
 		Return(nil, expected)
 
-	mockLog, _ := logger.NewLogger()
+	mockLog, _ := logger.NewTestLogger()
 	service := NewWeatherAPIService(mockClient, mockRedis, *mockLog)
 
 	result, err := service.GetWeather("Kyiv")
@@ -75,7 +75,7 @@ func TestGetWeather_Success(t *testing.T) {
 func TestGetWeather_CacheMiss_Success(t *testing.T) {
 	mockRedis := new(mockRedisProvider)
 	mockClient := new(mockWeatherChain)
-	mockLog, _ := logger.NewLogger()
+	mockLog, _ := logger.NewTestLogger()
 	service := NewWeatherAPIService(mockClient, mockRedis, *mockLog)
 
 	city := "Lviv"
@@ -104,7 +104,7 @@ func TestGetWeather_CacheMiss_Success(t *testing.T) {
 func TestGetWeather_CacheMiss_APIError(t *testing.T) {
 	mockRedis := new(mockRedisProvider)
 	mockClient := new(mockWeatherChain)
-	mockLog, _ := logger.NewLogger()
+	mockLog, _ := logger.NewTestLogger()
 	service := NewWeatherAPIService(mockClient, mockRedis, *mockLog)
 
 	city := "Odesa"
@@ -121,7 +121,7 @@ func TestGetWeather_CacheMiss_APIError(t *testing.T) {
 func TestGetWeather_CacheMiss_APISuccess_RedisSetError(t *testing.T) {
 	mockRedis := new(mockRedisProvider)
 	mockClient := new(mockWeatherChain)
-	mockLog, _ := logger.NewLogger()
+	mockLog, _ := logger.NewTestLogger()
 	service := NewWeatherAPIService(mockClient, mockRedis, *mockLog)
 
 	city := "Dnipro"

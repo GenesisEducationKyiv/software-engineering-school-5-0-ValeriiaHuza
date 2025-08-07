@@ -13,14 +13,25 @@ type Logger struct {
 }
 
 func NewLogger() (*Logger, error) {
-	encoderCfg := zap.NewProductionEncoderConfig()
-	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-	encoder := zapcore.NewJSONEncoder(encoderCfg)
+	encoderCfg := zapcore.EncoderConfig{
+		TimeKey:        "ts",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		FunctionKey:    zapcore.OmitKey,
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
+	}
 
 	writer := zapcore.Lock(os.Stdout)
 
 	logLevel := zapcore.InfoLevel
-	core := zapcore.NewCore(encoder, writer, logLevel)
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(encoderCfg), writer, logLevel)
 
 	// Wrap the core with sampling
 	sampledCore := zapcore.NewSamplerWithOptions(
