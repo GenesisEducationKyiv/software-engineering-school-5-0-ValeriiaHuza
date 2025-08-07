@@ -36,11 +36,7 @@ var (
 func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, func()) {
 	ctx := context.Background()
 
-	logger, err := logger.NewTestLogger()
-
-	if err != nil {
-		log.Fatalf("Failed to initialize logger: %v", err)
-	}
+	logger, _ := logger.NewTestLogger()
 
 	// Setup Postgres container
 	db, terminateDB, err := SetupPostgresContainer()
@@ -81,15 +77,15 @@ func setupRouter() (*gin.Engine, *repository.SubscriptionRepository, func()) {
 		}
 	}))
 
-	redisProvider := redis.NewRedisProvider(redisTest, ctx, logger)
-	fakeWeatherClient := weatherapi.NewWeatherAPIClient("fake-key", fakeWeatherServer.URL, http.DefaultClient, logger)
-	weatherChain := client.NewWeatherChain(fakeWeatherClient, logger)
-	weatherService := weather.NewWeatherAPIService(weatherChain, &redisProvider, logger)
+	redisProvider := redis.NewRedisProvider(redisTest, ctx, *logger)
+	fakeWeatherClient := weatherapi.NewWeatherAPIClient("fake-key", fakeWeatherServer.URL, http.DefaultClient, *logger)
+	weatherChain := client.NewWeatherChain(fakeWeatherClient, *logger)
+	weatherService := weather.NewWeatherAPIService(weatherChain, &redisProvider, *logger)
 	weatherController := weather.NewWeatherController(weatherService)
 
 	repo := repository.NewSubscriptionRepository(db)
 	emailPublisher := rabbitmq.NewRabbitMQPublisher(rabbitMQTest.Channel)
-	subscribeService := subscription.NewSubscribeService(weatherService, repo, emailPublisher, logger)
+	subscribeService := subscription.NewSubscribeService(weatherService, repo, emailPublisher, *logger)
 	subscribeController := subscription.NewSubscribeController(subscribeService)
 
 	r := gin.Default()
