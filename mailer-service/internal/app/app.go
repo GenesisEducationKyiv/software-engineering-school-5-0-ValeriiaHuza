@@ -28,7 +28,11 @@ func Run() error {
 		log.Fatalf("Failed to initialize zap logger: %v", err)
 	}
 
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			log.Printf("Error syncing logger: %v\n", err)
+		}
+	}()
 
 	logger.Info("Starting Mailer Service...")
 
