@@ -1,27 +1,26 @@
 package db
 
 import (
-	"log"
-
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/config"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-func ConnectToDatabase(config config.Config) (*gorm.DB, error) {
+func ConnectToDatabase(config config.Config, logger logger.Logger) (*gorm.DB, error) {
 
 	dsn := config.GetDSNString()
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Printf("Failed to connect to database: %v", err)
+		logger.Error("Failed to connect to database", "error", err)
 		return nil, err
 	}
 
-	log.Println("Connected to database")
+	logger.Info("Connected to database", "dsn", dsn)
 
 	if err := AutomatedMigration(db); err != nil {
-		log.Printf("Failed to run database migrations: %v", err)
+		logger.Error("Failed to run database migrations", "error", err)
 		return nil, err
 	}
 

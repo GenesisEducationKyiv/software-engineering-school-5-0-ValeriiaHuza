@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/stretchr/testify/mock"
 	"gopkg.in/gomail.v2"
 )
@@ -44,7 +45,8 @@ func (m *mockDialer) DialAndSend(msg ...*gomail.Message) error {
 func setupMailerTest(t *testing.T) (*mockEmailBuilder, *mockDialer, *MailService) {
 	builder := new(mockEmailBuilder)
 	dialer := new(mockDialer)
-	ms := NewMailerService("test@example.com", dialer, builder)
+	mockLog, _ := logger.NewTestLogger()
+	ms := NewMailerService("test@example.com", dialer, builder, *mockLog)
 	return builder, dialer, ms
 }
 

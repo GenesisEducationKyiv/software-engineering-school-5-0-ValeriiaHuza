@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/config"
@@ -15,10 +16,18 @@ import (
 
 func Run() error {
 
-	if err := logger.InitLoggerFile("app.log"); err != nil {
-		return fmt.Errorf("failed to init logger: %w", err)
+	logger, err := logger.NewLogger()
+	if err != nil {
+		log.Fatalf("Failed to initialize zap logger: %v", err)
 	}
-	defer logger.CloseLogFile()
+
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			log.Printf("Error syncing logger: %v\n", err)
+		}
+	}()
+
+	logger.Info("Starting Mailer Service...")
 
 	config, err := config.LoadEnvVariables()
 
@@ -26,7 +35,7 @@ func Run() error {
 		return err
 	}
 
-	rabbit, err := rabbitmq.ConnectToRabbitMQ(config.RabbitMQUrl)
+	rabbit, err := rabbitmq.ConnectToRabbitMQ(config.RabbitMQUrl, *logger)
 	if err != nil {
 		return err
 	}
@@ -37,7 +46,7 @@ func Run() error {
 		return err
 	}
 
-	initServices(*config, *rabbit)
+	initServices(*config, *rabbit, *logger)
 
 	router := gin.Default()
 
@@ -45,14 +54,14 @@ func Run() error {
 	return router.Run(":" + port)
 }
 
-func initServices(config config.Config, rabbit rabbitmq.RabbitMQ) {
-	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.ApiURL)
+func initServices(config config.Config, rabbit rabbitmq.RabbitMQ, logger logger.Logger) {
+	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.ApiURL, logger)
 
 	mailEmail := config.MailEmail
 	dialer := gomail.NewDialer(config.MailDialerHost, config.MailDialerPort, mailEmail, config.MailPassword)
-	mailerService := mailer.NewMailerService(mailEmail, dialer, emailBuilder)
+	mailerService := mailer.NewMailerService(mailEmail, dialer, emailBuilder, logger)
 
-	rabbitmqConsumer := rabbitmq.NewRabbitMQConsumer(rabbit.Channel)
+	rabbitmqConsumer := rabbitmq.NewRabbitMQConsumer(rabbit.Channel, logger)
 
 	go mailerService.StartEmailWorker(rabbitmqConsumer)
 

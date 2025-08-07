@@ -2,10 +2,10 @@ package mailer
 
 import (
 	"encoding/json"
-	"log"
 	"time"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/internal/rabbitmq"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 
 	"gopkg.in/gomail.v2"
 )
@@ -28,24 +28,28 @@ type MailService struct {
 	mailEmail string
 	dialer    dialer
 	builder   weatherEmailBuilder
+	logger    logger.Logger
 }
 
 func NewMailerService(mailEmail string, dialer dialer,
-	builder weatherEmailBuilder) *MailService {
+	builder weatherEmailBuilder, logger logger.Logger) *MailService {
 	return &MailService{
 		mailEmail: mailEmail,
 		dialer:    dialer,
-		builder:   builder}
+		builder:   builder,
+		logger:    logger,
+	}
 }
 
 func (ms *MailService) StartEmailWorker(consumer rabbitMQConsumer) {
 	consumer.Consume(rabbitmq.SendEmail, func(body []byte) {
 		var job EmailJob
 		if err := json.Unmarshal(body, &job); err != nil {
-			log.Println("Failed to unmarshal EmailJob:", err)
+			ms.logger.Error("Failed to unmarshal EmailJob", "error", err)
 			return
 		}
-		log.Printf("Processing EmailJob: %+v", job)
+
+		ms.logger.Info("Processing EmailJob", "jobType", job.EmailType, "jobEmail", job.To)
 
 		switch job.EmailType {
 		case EmailTypeCreateSubscription:
@@ -53,17 +57,17 @@ func (ms *MailService) StartEmailWorker(consumer rabbitMQConsumer) {
 		case EmailTypeConfirmSuccess:
 			ms.SendConfirmSuccessEmail(job.Subscription)
 		default:
-			log.Println("Unknown email type:", job.EmailType)
+			ms.logger.Error("Unknown email type", "emailType", job.EmailType)
 		}
 	})
 
 	consumer.Consume(rabbitmq.WeatherUpdate, func(body []byte) {
 		var job WeatherUpdateJob
 		if err := json.Unmarshal(body, &job); err != nil {
-			log.Println("Failed to unmarshal WeatherUpdateJob:", err)
+			ms.logger.Error("Failed to unmarshal WeatherUpdateJob", "error", err)
 			return
 		}
-		log.Printf("Processing WeatherUpdateJob: %+v", job)
+		ms.logger.Info("Processing WeatherUpdateJob", "jobType", job.EmailType, "jobEmail", job.To, "jobWeather", job.Weather)
 
 		ms.SendWeatherUpdateEmail(job.Subscription, job.Weather)
 	})
@@ -91,8 +95,9 @@ func (ms *MailService) send(to, subject, body string) {
 	m.SetBody("text/html", body)
 
 	if err := ms.dialer.DialAndSend(m); err != nil {
-		log.Println("Email send failed:", err)
-	} else {
-		log.Println("Email sent to", to)
+		ms.logger.Error("Failed to send email", "to", to, "error", err)
+		return
 	}
+	ms.logger.Info("Email sent successfully", "to", to, "subject", subject)
+
 }

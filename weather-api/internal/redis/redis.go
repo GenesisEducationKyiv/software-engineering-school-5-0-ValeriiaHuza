@@ -3,9 +3,9 @@ package redis
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"time"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -16,14 +16,16 @@ type redisClient interface {
 }
 
 type RedisProvider struct {
-	rdb redisClient
-	ctx context.Context
+	rdb    redisClient
+	ctx    context.Context
+	logger logger.Logger
 }
 
-func NewRedisProvider(redis redisClient, ctx context.Context) RedisProvider {
+func NewRedisProvider(redis redisClient, ctx context.Context, logger logger.Logger) RedisProvider {
 	return RedisProvider{
-		rdb: redis,
-		ctx: ctx,
+		rdb:    redis,
+		ctx:    ctx,
+		logger: logger,
 	}
 }
 
@@ -33,7 +35,7 @@ func (c *RedisProvider) Set(key string, value interface{}) error {
 		return err
 	}
 
-	log.Printf("Set to Redis : key - %s", key)
+	c.logger.Info("Set to Redis", "key", key)
 
 	return c.rdb.Set(c.ctx, key, data, 0).Err()
 }
@@ -44,7 +46,7 @@ func (c *RedisProvider) SetWithTTL(key string, value interface{}, ttl time.Durat
 		return err
 	}
 
-	log.Printf("Set to Redis with ttl : key - %s", key)
+	c.logger.Info("Set to Redis with TTL", "key", key, "ttl", ttl)
 
 	return c.rdb.Set(c.ctx, key, data, ttl).Err()
 }
@@ -55,12 +57,12 @@ func (c *RedisProvider) Get(key string, dest interface{}) error {
 		return err
 	}
 
-	log.Printf("Get from Redis : key - %s", key)
+	c.logger.Info("Get from Redis", "key", key)
 
 	return json.Unmarshal([]byte(data), dest)
 }
 
 func (c *RedisProvider) Delete(key ...string) error {
-	log.Printf("Delete from Redis : %s", key)
+	c.logger.Info("Delete from Redis", "keys", key)
 	return c.rdb.Del(c.ctx, key...).Err()
 }

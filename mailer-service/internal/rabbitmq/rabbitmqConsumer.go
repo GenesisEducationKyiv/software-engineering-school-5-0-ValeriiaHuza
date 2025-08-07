@@ -1,16 +1,16 @@
 package rabbitmq
 
 import (
-	"log"
-
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/rabbitmq/amqp091-go"
 )
 
 type RabbitMQConsumer struct {
 	channel *amqp091.Channel
+	logger  logger.Logger
 }
 
-func NewRabbitMQConsumer(channel *amqp091.Channel) *RabbitMQConsumer {
+func NewRabbitMQConsumer(channel *amqp091.Channel, logger logger.Logger) *RabbitMQConsumer {
 	return &RabbitMQConsumer{channel: channel}
 }
 
@@ -25,14 +25,15 @@ func (c *RabbitMQConsumer) Consume(queue string, handler func(body []byte)) {
 		nil,
 	)
 	if err != nil {
-		log.Printf("Failed to register a consumer: %v", err)
+		c.logger.Error("Failed to register a consumer", "error", err)
+		return
 	}
 
 	go func() {
 		for msg := range msgs {
 			handler(msg.Body)
 			if err := msg.Ack(false); err != nil {
-				log.Printf("Failed to ack message: %v", err)
+				c.logger.Error("Failed to ack message", "error", err)
 			}
 		}
 	}()

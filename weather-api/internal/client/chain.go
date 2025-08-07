@@ -1,8 +1,6 @@
 package client
 
-import (
-	"log"
-)
+import "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 
 type weatherProvider interface {
 	FetchWeather(city string) (*WeatherDTO, error)
@@ -16,15 +14,17 @@ type weatherChainProvider interface {
 type WeatherChain struct {
 	next     weatherChainProvider
 	provider weatherProvider
+	logger   logger.Logger
 }
 
 func (h *WeatherChain) SetNext(provider weatherChainProvider) {
 	h.next = provider
 }
 
-func NewWeatherChain(provider weatherProvider) *WeatherChain {
+func NewWeatherChain(provider weatherProvider, logger logger.Logger) *WeatherChain {
 	return &WeatherChain{
 		provider: provider,
+		logger:   logger,
 	}
 }
 
@@ -34,13 +34,13 @@ func (c *WeatherChain) GetWeather(city string) (*WeatherDTO, error) {
 		return weather, nil
 	}
 
-	log.Printf("Weather provider error for city '%s': %s. Trying next provider...", city, err)
+	c.logger.Error("Weather provider error. Trying next provider... ", "city", city, "error", err)
 
 	if c.next != nil {
 		return c.next.GetWeather(city)
 	}
 
-	log.Printf("all providers failed for city '%s': last error: %s", city, err)
+	c.logger.Error("All weather providers failed", "city", city, "error", err)
 
 	return nil, err
 }

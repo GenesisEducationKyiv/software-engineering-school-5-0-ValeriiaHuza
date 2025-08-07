@@ -1,36 +1,71 @@
 package logger
 
 import (
-	"io"
-	"log"
 	"os"
+	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
-var (
-	logFile *os.File
-)
-
-func InitLoggerFile(appLogPath string) error {
-	// Close existing log file if open
-	if logFile != nil {
-		_ = logFile.Close()
-	}
-
-	var err error
-	logFile, err = os.OpenFile(appLogPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		return err
-	}
-
-	// Redirect standard logger to both stdout and file
-	log.SetOutput(io.MultiWriter(os.Stdout, logFile))
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
-
-	return nil
+type Logger struct {
+	logger *zap.SugaredLogger
 }
 
-func CloseLogFile() {
-	if logFile != nil {
-		_ = logFile.Close()
+func NewLogger() (*Logger, error) {
+	encoderCfg := zapcore.EncoderConfig{
+		TimeKey:        "ts",
+		LevelKey:       "level",
+		NameKey:        "logger",
+		CallerKey:      "caller",
+		FunctionKey:    zapcore.OmitKey,
+		MessageKey:     "msg",
+		StacktraceKey:  "stacktrace",
+		LineEnding:     zapcore.DefaultLineEnding,
+		EncodeLevel:    zapcore.LowercaseLevelEncoder,
+		EncodeTime:     zapcore.ISO8601TimeEncoder,
+		EncodeDuration: zapcore.SecondsDurationEncoder,
+		EncodeCaller:   zapcore.ShortCallerEncoder,
 	}
+
+	writer := zapcore.Lock(os.Stdout)
+
+	logLevel := zapcore.InfoLevel
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(encoderCfg), writer, logLevel)
+
+	// Wrap the core with sampling
+	sampledCore := zapcore.NewSamplerWithOptions(
+		core,
+		// Sampling window (1 second here)
+		// meaning it resets counters every second
+		time.Second,
+		100, // first 100 logs per second are logged
+		10,  // then 1 every 10 is logged
+	)
+
+	// Create a new logger using the sampled core
+	zapLogger := zap.New(sampledCore,
+		zap.AddCaller(),
+		zap.AddCallerSkip(1),
+		zap.AddStacktrace(zapcore.ErrorLevel))
+
+	return &Logger{
+		logger: zapLogger.Sugar(),
+	}, nil
+}
+
+func (l *Logger) Info(msg string, keysAndValues ...any) {
+	l.logger.Infow(msg, keysAndValues...)
+}
+
+func (l *Logger) Error(msg string, keysAndValues ...any) {
+	l.logger.Errorw(msg, keysAndValues...)
+}
+
+func (l *Logger) Debug(msg string, keysAndValues ...any) {
+	l.logger.Debugw(msg, keysAndValues...)
+}
+
+func (l *Logger) Sync() error {
+	return l.logger.Sync()
 }

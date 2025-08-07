@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -61,7 +62,8 @@ func TestGetWeather_Success(t *testing.T) {
 	mockRedis.On("Get", "weather:Kyiv", mock.Anything).
 		Return(nil, expected)
 
-	service := NewWeatherAPIService(mockClient, mockRedis)
+	mockLog, _ := logger.NewTestLogger()
+	service := NewWeatherAPIService(mockClient, mockRedis, *mockLog)
 
 	result, err := service.GetWeather("Kyiv")
 	assert.NoError(t, err)
@@ -73,7 +75,8 @@ func TestGetWeather_Success(t *testing.T) {
 func TestGetWeather_CacheMiss_Success(t *testing.T) {
 	mockRedis := new(mockRedisProvider)
 	mockClient := new(mockWeatherChain)
-	service := NewWeatherAPIService(mockClient, mockRedis)
+	mockLog, _ := logger.NewTestLogger()
+	service := NewWeatherAPIService(mockClient, mockRedis, *mockLog)
 
 	city := "Lviv"
 	expected := &client.WeatherDTO{
@@ -101,7 +104,8 @@ func TestGetWeather_CacheMiss_Success(t *testing.T) {
 func TestGetWeather_CacheMiss_APIError(t *testing.T) {
 	mockRedis := new(mockRedisProvider)
 	mockClient := new(mockWeatherChain)
-	service := NewWeatherAPIService(mockClient, mockRedis)
+	mockLog, _ := logger.NewTestLogger()
+	service := NewWeatherAPIService(mockClient, mockRedis, *mockLog)
 
 	city := "Odesa"
 	mockRedis.On("Get", mock.Anything, mock.Anything).Return(errors.New("not found"), nil)
@@ -117,7 +121,8 @@ func TestGetWeather_CacheMiss_APIError(t *testing.T) {
 func TestGetWeather_CacheMiss_APISuccess_RedisSetError(t *testing.T) {
 	mockRedis := new(mockRedisProvider)
 	mockClient := new(mockWeatherChain)
-	service := NewWeatherAPIService(mockClient, mockRedis)
+	mockLog, _ := logger.NewTestLogger()
+	service := NewWeatherAPIService(mockClient, mockRedis, *mockLog)
 
 	city := "Dnipro"
 	expected := &client.WeatherDTO{Temperature: 10.0, Humidity: 70, Description: "Rainy"}
