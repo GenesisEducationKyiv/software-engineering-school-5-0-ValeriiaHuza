@@ -7,9 +7,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/rabbitmq"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -84,7 +84,7 @@ func TestSubscribeForWeatherUpdates_Success(t *testing.T) {
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	email := "test@example.com"
@@ -109,7 +109,7 @@ func TestSubscribeForWeatherUpdates_WeatherServiceError(t *testing.T) {
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
@@ -133,7 +133,7 @@ func TestSubscribeForWeatherUpdates_EmailAlreadySubscribed(t *testing.T) {
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
@@ -159,7 +159,7 @@ func TestSubscribeForWeatherUpdates_CreateError(t *testing.T) {
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	err := service.SubscribeForWeatherUpdates("test@example.com", "Kyiv", Frequency("daily"))
@@ -192,7 +192,7 @@ func TestConfirmSubscription_Success(t *testing.T) {
 	service := &SubscribeService{
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	err := service.ConfirmSubscription("token123")
@@ -211,7 +211,7 @@ func TestConfirmSubscription_TokenNotFound(t *testing.T) {
 	service := &SubscribeService{
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	err := service.ConfirmSubscription("invalid-token")
@@ -239,7 +239,7 @@ func TestConfirmSubscription_UpdateError(t *testing.T) {
 	service := &SubscribeService{
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	err := service.ConfirmSubscription("token123")
@@ -263,7 +263,7 @@ func TestUnsubscribe_Success(t *testing.T) {
 	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	err := service.Unsubscribe("token123")
@@ -277,7 +277,7 @@ func TestUnsubscribe_TokenNotFound(t *testing.T) {
 	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	err := service.Unsubscribe("invalid-token")
@@ -294,7 +294,7 @@ func TestUnsubscribe_SubscriptionNil(t *testing.T) {
 	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	err := service.Unsubscribe("token123")
@@ -320,7 +320,7 @@ func TestUnsubscribe_DeleteError(t *testing.T) {
 
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	err := service.Unsubscribe("token123")
@@ -334,7 +334,7 @@ func TestEmailSubscribed_ReturnsTrueWhenSubscribed(t *testing.T) {
 
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	subscribed := service.emailSubscribed("test@example.com")
@@ -349,7 +349,7 @@ func TestEmailSubscribed_ReturnsError(t *testing.T) {
 	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	subscribed := service.emailSubscribed("test@example.com")
@@ -368,7 +368,7 @@ func TestGetConfirmedSubscriptionsByFrequency_ReturnsSubscriptions(t *testing.T)
 	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	result := service.GetConfirmedSubscriptionsByFrequency(Frequency("daily"))
@@ -382,7 +382,7 @@ func TestGetConfirmedSubscriptionsByFrequency_RepoError_ReturnsEmptySlice(t *tes
 	mockLogger, _ := logger.NewLogger()
 	service := &SubscribeService{
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	result := service.GetConfirmedSubscriptionsByFrequency(Frequency("daily"))
@@ -413,7 +413,7 @@ func TestSendSubscriptionEmails_SendsEmails(t *testing.T) {
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	service.SendSubscriptionEmails(Frequency("daily"))
@@ -438,7 +438,7 @@ func TestSendSubscriptionEmails_WeatherError_SkipsEmail(t *testing.T) {
 		weatherService:         mockWeather,
 		mailPublisher:          mockPublisher,
 		subscriptionRepository: mockRepo,
-		logger:                 mockLogger,
+		logger:                 *mockLogger,
 	}
 
 	service.SendSubscriptionEmails(Frequency("daily"))

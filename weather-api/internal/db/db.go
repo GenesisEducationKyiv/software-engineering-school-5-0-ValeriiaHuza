@@ -2,16 +2,12 @@ package db
 
 import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/config"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
-type loggerInterface interface {
-	Info(msg string, keysAndValues ...any)
-	Error(msg string, keysAndValues ...any)
-}
-
-func ConnectToDatabase(config config.Config, logger loggerInterface) (*gorm.DB, error) {
+func ConnectToDatabase(config config.Config, logger logger.Logger) (*gorm.DB, error) {
 
 	dsn := config.GetDSNString()
 

@@ -1,15 +1,16 @@
 package rabbitmq
 
 import (
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/rabbitmq/amqp091-go"
 )
 
 type RabbitMQConsumer struct {
 	channel *amqp091.Channel
-	logger  loggerInterface
+	logger  logger.Logger
 }
 
-func NewRabbitMQConsumer(channel *amqp091.Channel, logger loggerInterface) *RabbitMQConsumer {
+func NewRabbitMQConsumer(channel *amqp091.Channel, logger logger.Logger) *RabbitMQConsumer {
 	return &RabbitMQConsumer{channel: channel}
 }
 

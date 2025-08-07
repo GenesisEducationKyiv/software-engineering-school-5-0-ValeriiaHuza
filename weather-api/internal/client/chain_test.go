@@ -29,7 +29,7 @@ func TestWeatherChain_SuccessFirstProvider_Mock(t *testing.T) {
 	provider.On("FetchWeather", "Kyiv").Return(want, nil)
 
 	mockLog, _ := logger.NewLogger()
-	chain := NewWeatherChain(provider, mockLog)
+	chain := NewWeatherChain(provider, *mockLog)
 
 	got, err := chain.GetWeather("Kyiv")
 	assert.NoError(t, err)
@@ -47,8 +47,8 @@ func TestWeatherChain_SecondProviderSuccess_Mock(t *testing.T) {
 	provider2.On("FetchWeather", "Lviv").Return(want, nil)
 
 	mockLog, _ := logger.NewLogger()
-	chain := NewWeatherChain(provider1, mockLog)
-	chain.SetNext(NewWeatherChain(provider2, mockLog))
+	chain := NewWeatherChain(provider1, *mockLog)
+	chain.SetNext(NewWeatherChain(provider2, *mockLog))
 
 	got, err := chain.GetWeather("Lviv")
 	assert.NoError(t, err)
@@ -66,8 +66,8 @@ func TestWeatherChain_AllProvidersFail_Mock(t *testing.T) {
 	provider2.On("FetchWeather", "Odesa").Return(nil, errors.New("fail2"))
 
 	mockLog, _ := logger.NewLogger()
-	chain := NewWeatherChain(provider1, mockLog)
-	chain.SetNext(NewWeatherChain(provider2, mockLog))
+	chain := NewWeatherChain(provider1, *mockLog)
+	chain.SetNext(NewWeatherChain(provider2, *mockLog))
 
 	got, err := chain.GetWeather("Odesa")
 	assert.Nil(t, got)

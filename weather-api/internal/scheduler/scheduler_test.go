@@ -33,7 +33,7 @@ func TestStartCronJobs_SchedulesJobs(t *testing.T) {
 
 	mockLog, _ := logger.NewLogger()
 
-	scheduler := NewScheduler(mockService, mockLog) // Assuming constructor exists
+	scheduler := NewScheduler(mockService, *mockLog) // Assuming constructor exists
 	scheduler.StartCronJobs()
 
 	mockService.SendSubscriptionEmails(subscription.FrequencyDaily)

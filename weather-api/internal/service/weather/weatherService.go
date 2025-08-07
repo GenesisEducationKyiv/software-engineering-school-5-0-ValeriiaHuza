@@ -5,12 +5,8 @@ import (
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/redis"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 )
-
-type loggerInterface interface {
-	Info(msg string, keysAndValues ...any)
-	Error(msg string, keysAndValues ...any)
-}
 
 type weatherChain interface {
 	GetWeather(city string) (*client.WeatherDTO, error)
@@ -24,11 +20,11 @@ type redisProvider interface {
 type WeatherService struct {
 	weatherChain  weatherChain
 	redisProvider redisProvider
-	logger        loggerInterface
+	logger        logger.Logger
 }
 
 func NewWeatherAPIService(weatherChain weatherChain, redisProvider redisProvider,
-	logger loggerInterface) *WeatherService {
+	logger logger.Logger) *WeatherService {
 	return &WeatherService{
 		weatherChain:  weatherChain,
 		redisProvider: redisProvider,

@@ -11,21 +11,17 @@ import (
 	"strings"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 )
-
-type loggerInterface interface {
-	Info(msg string, keysAndValues ...any)
-	Error(msg string, keysAndValues ...any)
-}
 
 type GeocodingClient struct {
 	apiKey string
 	apiUrl string
 	client *http.Client
-	logger loggerInterface
+	logger logger.Logger
 }
 
-func NewGeocodingClient(apiKey string, apiUrl string, http *http.Client, logger loggerInterface) *GeocodingClient {
+func NewGeocodingClient(apiKey string, apiUrl string, http *http.Client, logger logger.Logger) *GeocodingClient {
 	return &GeocodingClient{
 		apiKey: apiKey,
 		apiUrl: strings.TrimRight(apiUrl, "/"),

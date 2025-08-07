@@ -50,7 +50,7 @@ func TestFetchWeather_Success(t *testing.T) {
 	}`
 	client := newMockClient(mockBody, 200, nil)
 	mockLog, _ := logger.NewLogger()
-	apiClient := NewWeatherAPIClient("dummy-key", "api-url", client, mockLog)
+	apiClient := NewWeatherAPIClient("dummy-key", "api-url", client, *mockLog)
 
 	result, err := apiClient.FetchWeather("London")
 
@@ -63,7 +63,7 @@ func TestFetchWeather_Success(t *testing.T) {
 func TestFetchWeather_HTTPError(t *testing.T) {
 	client := newMockClient("", 0, errors.New("network error"))
 	mockLog, _ := logger.NewLogger()
-	apiClient := NewWeatherAPIClient("dummy-key", "api-url", client, mockLog)
+	apiClient := NewWeatherAPIClient("dummy-key", "api-url", client, *mockLog)
 
 	_, err := apiClient.FetchWeather("London")
 
@@ -74,7 +74,7 @@ func TestFetchWeather_BadJSON(t *testing.T) {
 	mockBody := `not a json`
 	client := newMockClient(mockBody, 200, nil)
 	mockLog, _ := logger.NewLogger()
-	apiClient := NewWeatherAPIClient("dummy-key", "api-url", client, mockLog)
+	apiClient := NewWeatherAPIClient("dummy-key", "api-url", client, *mockLog)
 
 	_, err := apiClient.FetchWeather("London")
 	assert.Error(t, err)
@@ -89,7 +89,7 @@ func TestFetchWeather_APIError_CityNotFound(t *testing.T) {
 	}`
 	client := newMockClient(mockBody, 200, nil)
 	mockLog, _ := logger.NewLogger()
-	apiClient := NewWeatherAPIClient("dummy-key", "api-url", client, mockLog)
+	apiClient := NewWeatherAPIClient("dummy-key", "api-url", client, *mockLog)
 
 	_, err := apiClient.FetchWeather("UnknownCity")
 	assert.Error(t, err)
@@ -105,7 +105,7 @@ func TestFetchWeather_APIError_InvalidRequest(t *testing.T) {
 	}`
 	client := newMockClient(mockBody, 200, nil)
 	mockLog, _ := logger.NewLogger()
-	apiClient := NewWeatherAPIClient("dummy-key", "api-url", client, mockLog)
+	apiClient := NewWeatherAPIClient("dummy-key", "api-url", client, *mockLog)
 
 	_, err := apiClient.FetchWeather("London")
 

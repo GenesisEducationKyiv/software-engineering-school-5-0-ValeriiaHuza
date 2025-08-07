@@ -1,9 +1,6 @@
 package client
 
-type loggerInterface interface {
-	Info(msg string, keysAndValues ...any)
-	Error(msg string, keysAndValues ...any)
-}
+import "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 
 type weatherProvider interface {
 	FetchWeather(city string) (*WeatherDTO, error)
@@ -17,14 +14,14 @@ type weatherChainProvider interface {
 type WeatherChain struct {
 	next     weatherChainProvider
 	provider weatherProvider
-	logger   loggerInterface
+	logger   logger.Logger
 }
 
 func (h *WeatherChain) SetNext(provider weatherChainProvider) {
 	h.next = provider
 }
 
-func NewWeatherChain(provider weatherProvider, logger loggerInterface) *WeatherChain {
+func NewWeatherChain(provider weatherProvider, logger logger.Logger) *WeatherChain {
 	return &WeatherChain{
 		provider: provider,
 		logger:   logger,

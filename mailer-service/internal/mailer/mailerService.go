@@ -5,14 +5,10 @@ import (
 	"time"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/internal/rabbitmq"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 
 	"gopkg.in/gomail.v2"
 )
-
-type loggerInterface interface {
-	Info(msg string, args ...any)
-	Error(msg string, args ...any)
-}
 
 type dialer interface {
 	DialAndSend(msg ...*gomail.Message) error
@@ -32,11 +28,11 @@ type MailService struct {
 	mailEmail string
 	dialer    dialer
 	builder   weatherEmailBuilder
-	logger    loggerInterface
+	logger    logger.Logger
 }
 
 func NewMailerService(mailEmail string, dialer dialer,
-	builder weatherEmailBuilder, logger loggerInterface) *MailService {
+	builder weatherEmailBuilder, logger logger.Logger) *MailService {
 	return &MailService{
 		mailEmail: mailEmail,
 		dialer:    dialer,

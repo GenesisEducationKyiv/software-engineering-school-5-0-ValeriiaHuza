@@ -5,13 +5,9 @@ import (
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/rabbitmq"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/google/uuid"
 )
-
-type loggerInterface interface {
-	Info(msg string, keysAndValues ...any)
-	Error(msg string, keysAndValues ...any)
-}
 
 type mailPublisher interface {
 	Publish(queue string, payload any) error
@@ -34,12 +30,12 @@ type SubscribeService struct {
 	weatherService         weatherService
 	subscriptionRepository subscriptionRepository
 	mailPublisher          mailPublisher
-	logger                 loggerInterface
+	logger                 logger.Logger
 }
 
 func NewSubscribeService(weatherService weatherService,
 	repository subscriptionRepository,
-	mailPublisher mailPublisher, logger loggerInterface) *SubscribeService {
+	mailPublisher mailPublisher, logger logger.Logger) *SubscribeService {
 	return &SubscribeService{
 		weatherService:         weatherService,
 		subscriptionRepository: repository,

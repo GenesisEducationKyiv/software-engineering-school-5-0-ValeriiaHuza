@@ -28,13 +28,6 @@ import (
 	"gorm.io/gorm"
 )
 
-type loggerInterface interface {
-	Info(msg string, args ...any)
-	Error(msg string, args ...any)
-	Debug(msg string, args ...any)
-	Sync() error
-}
-
 func Run() error {
 	var ctx = context.Background()
 
@@ -57,7 +50,7 @@ func Run() error {
 		return err
 	}
 
-	db, err := db.ConnectToDatabase(*config, logger)
+	db, err := db.ConnectToDatabase(*config, *logger)
 
 	if err != nil {
 		return err
@@ -76,7 +69,7 @@ func Run() error {
 		}
 	}()
 
-	redis, err := redisProvider.ConnectToRedis(ctx, *config, logger)
+	redis, err := redisProvider.ConnectToRedis(ctx, *config, *logger)
 
 	if err != nil {
 		return err
@@ -88,7 +81,7 @@ func Run() error {
 		}
 	}()
 
-	rabbit, err := rabbitmq.ConnectToRabbitMQ(config.RabbitMQUrl, logger)
+	rabbit, err := rabbitmq.ConnectToRabbitMQ(config.RabbitMQUrl, *logger)
 	if err != nil {
 		return err
 	}
@@ -103,12 +96,12 @@ func Run() error {
 
 	router := setupRouter()
 
-	redisPrv := redisProvider.NewRedisProvider(redis, ctx, logger)
+	redisPrv := redisProvider.NewRedisProvider(redis, ctx, *logger)
 
-	services := initServices(*config, db, redisPrv, emailPublisher, logger)
+	services := initServices(*config, db, redisPrv, emailPublisher, *logger)
 
 	initRoutes(router, services)
-	startBackgroundJobs(*services.subscribeService, logger)
+	startBackgroundJobs(*services.subscribeService, *logger)
 
 	return startServer(*config, router)
 }
@@ -138,7 +131,7 @@ func initRoutes(router *gin.Engine, services *Services) {
 	routes.SubscribeRoute(api, subscribeController)
 }
 
-func startBackgroundJobs(subscribeService subscription.SubscribeService, logger loggerInterface) {
+func startBackgroundJobs(subscribeService subscription.SubscribeService, logger logger.Logger) {
 	schedulerService := scheduler.NewScheduler(&subscribeService, logger)
 	schedulerService.StartCronJobs()
 }
@@ -151,7 +144,7 @@ func startServer(config config.Config, router *gin.Engine) error {
 
 func initServices(config config.Config, database *gorm.DB,
 	redisPrv redisProvider.RedisProvider, emailPublisher *rabbitmq.RabbitMQPublisher,
-	logger loggerInterface) *Services {
+	logger logger.Logger) *Services {
 
 	weatherApiChain := buildWeatherResponsibilityChain(config, logger)
 
@@ -167,7 +160,7 @@ func initServices(config config.Config, database *gorm.DB,
 	}
 }
 
-func buildWeatherResponsibilityChain(config config.Config, logger loggerInterface) *client.WeatherChain {
+func buildWeatherResponsibilityChain(config config.Config, logger logger.Logger) *client.WeatherChain {
 	http := httpclient.InitHttpClient()
 
 	geocoding := openweather.NewGeocodingClient(config.OpenWeatherKey, config.OpenWeatherUrl, &http, logger)

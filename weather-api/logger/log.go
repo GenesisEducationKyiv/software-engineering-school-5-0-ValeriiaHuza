@@ -8,11 +8,11 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type logger struct {
+type Logger struct {
 	logger *zap.SugaredLogger
 }
 
-func NewLogger() (*logger, error) {
+func NewLogger() (*Logger, error) {
 	encoderCfg := zap.NewProductionEncoderConfig()
 	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoder := zapcore.NewJSONEncoder(encoderCfg)
@@ -33,25 +33,28 @@ func NewLogger() (*logger, error) {
 	)
 
 	// Create a new logger using the sampled core
-	zapLogger := zap.New(sampledCore, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
+	zapLogger := zap.New(sampledCore,
+		zap.AddCaller(),
+		zap.AddCallerSkip(1),
+		zap.AddStacktrace(zapcore.ErrorLevel))
 
-	return &logger{
+	return &Logger{
 		logger: zapLogger.Sugar(),
 	}, nil
 }
 
-func (l *logger) Info(msg string, keysAndValues ...any) {
+func (l *Logger) Info(msg string, keysAndValues ...any) {
 	l.logger.Infow(msg, keysAndValues...)
 }
 
-func (l *logger) Error(msg string, keysAndValues ...any) {
+func (l *Logger) Error(msg string, keysAndValues ...any) {
 	l.logger.Errorw(msg, keysAndValues...)
 }
 
-func (l *logger) Debug(msg string, keysAndValues ...any) {
+func (l *Logger) Debug(msg string, keysAndValues ...any) {
 	l.logger.Debugw(msg, keysAndValues...)
 }
 
-func (l *logger) Sync() error {
+func (l *Logger) Sync() error {
 	return l.logger.Sync()
 }

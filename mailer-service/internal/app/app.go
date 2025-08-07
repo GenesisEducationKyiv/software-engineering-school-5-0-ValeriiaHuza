@@ -14,13 +14,6 @@ import (
 	"gopkg.in/gomail.v2"
 )
 
-type loggerInterface interface {
-	Info(msg string, args ...any)
-	Error(msg string, args ...any)
-	Debug(msg string, args ...any)
-	Sync() error
-}
-
 func Run() error {
 
 	logger, err := logger.NewLogger()
@@ -42,7 +35,7 @@ func Run() error {
 		return err
 	}
 
-	rabbit, err := rabbitmq.ConnectToRabbitMQ(config.RabbitMQUrl, logger)
+	rabbit, err := rabbitmq.ConnectToRabbitMQ(config.RabbitMQUrl, *logger)
 	if err != nil {
 		return err
 	}
@@ -53,7 +46,7 @@ func Run() error {
 		return err
 	}
 
-	initServices(*config, *rabbit, logger)
+	initServices(*config, *rabbit, *logger)
 
 	router := gin.Default()
 
@@ -61,7 +54,7 @@ func Run() error {
 	return router.Run(":" + port)
 }
 
-func initServices(config config.Config, rabbit rabbitmq.RabbitMQ, logger loggerInterface) {
+func initServices(config config.Config, rabbit rabbitmq.RabbitMQ, logger logger.Logger) {
 	emailBuilder := emailBuilder.NewWeatherEmailBuilder(config.ApiURL, logger)
 
 	mailEmail := config.MailEmail

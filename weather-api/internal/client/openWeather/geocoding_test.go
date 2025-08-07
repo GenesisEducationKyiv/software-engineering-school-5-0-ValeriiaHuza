@@ -45,7 +45,7 @@ func TestGetCityCoordinates_Success(t *testing.T) {
 	mockClient := newMockClient(mockBody, 200, nil)
 	mockLog, _ := logger.NewLogger()
 
-	client := NewGeocodingClient(apiKey, apiUrl, mockClient, mockLog)
+	client := NewGeocodingClient(apiKey, apiUrl, mockClient, *mockLog)
 
 	coords, err := client.GetCityCoordinates("Kyiv")
 	assert.NoError(t, err)
@@ -60,7 +60,7 @@ func TestGetCityCoordinates_NoCityFound(t *testing.T) {
 	mockClient := newMockClient("[]", 200, nil)
 	mockLog, _ := logger.NewLogger()
 
-	geoClient := NewGeocodingClient(apiKey, apiUrl, mockClient, mockLog)
+	geoClient := NewGeocodingClient(apiKey, apiUrl, mockClient, *mockLog)
 
 	coords, err := geoClient.GetCityCoordinates("Kyiv")
 	assert.Error(t, err)
@@ -74,7 +74,7 @@ func TestGetCityCoordinates_Non200Status(t *testing.T) {
 	mockClient := newMockClient("not found", 404, nil)
 	mockLog, _ := logger.NewLogger()
 
-	client := NewGeocodingClient(apiKey, apiUrl, mockClient, mockLog)
+	client := NewGeocodingClient(apiKey, apiUrl, mockClient, *mockLog)
 
 	coords, err := client.GetCityCoordinates("Kyiv")
 	assert.Error(t, err)
@@ -87,7 +87,7 @@ func TestGetCityCoordinates_InvalidJSON(t *testing.T) {
 	mockClient := newMockClient("{invalid json", 200, nil)
 
 	mockLog, _ := logger.NewLogger()
-	client := NewGeocodingClient(apiKey, apiUrl, mockClient, mockLog)
+	client := NewGeocodingClient(apiKey, apiUrl, mockClient, *mockLog)
 
 	coords, err := client.GetCityCoordinates("Kyiv")
 	assert.Error(t, err)

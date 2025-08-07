@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 )
 
 type geocodingClient interface {
@@ -20,12 +21,12 @@ type WeatherAPIClient struct {
 	apiUrl    string
 	geocoding geocodingClient
 	client    *http.Client
-	logger    loggerInterface
+	logger    logger.Logger
 }
 
 func NewWeatherAPIClient(apiKey string, apiUrl string,
 	geocoding geocodingClient, http *http.Client,
-	logger loggerInterface) *WeatherAPIClient {
+	logger logger.Logger) *WeatherAPIClient {
 	return &WeatherAPIClient{
 		apiKey:    apiKey,
 		geocoding: geocoding,

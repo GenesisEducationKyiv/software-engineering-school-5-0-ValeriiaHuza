@@ -6,19 +6,15 @@ import (
 	"time"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/internal/mailer"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 )
-
-type loggerInterface interface {
-	Info(msg string, keysAndValues ...any)
-	Error(msg string, keysAndValues ...any)
-}
 
 type WeatherEmailBuilder struct {
 	appUrl string
-	logger loggerInterface
+	logger logger.Logger
 }
 
-func NewWeatherEmailBuilder(appUrl string, logger loggerInterface) *WeatherEmailBuilder {
+func NewWeatherEmailBuilder(appUrl string, logger logger.Logger) *WeatherEmailBuilder {
 	return &WeatherEmailBuilder{
 		appUrl: appUrl,
 		logger: logger,

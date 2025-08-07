@@ -1,21 +1,17 @@
 package rabbitmq
 
 import (
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 	"github.com/rabbitmq/amqp091-go"
 )
-
-type loggerInterface interface {
-	Info(msg string, args ...any)
-	Error(msg string, args ...any)
-}
 
 type RabbitMQ struct {
 	Conn    *amqp091.Connection
 	Channel *amqp091.Channel
-	logger  loggerInterface
+	logger  logger.Logger
 }
 
-func ConnectToRabbitMQ(connectionUrl string, logger loggerInterface) (*RabbitMQ, error) {
+func ConnectToRabbitMQ(connectionUrl string, logger logger.Logger) (*RabbitMQ, error) {
 	conn, err := amqp091.Dial(connectionUrl)
 	if err != nil {
 		logger.Error("Failed to connect to RabbitMQ", "error", err)

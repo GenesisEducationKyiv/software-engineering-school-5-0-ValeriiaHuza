@@ -5,10 +5,11 @@ import (
 	"fmt"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/config"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/redis/go-redis/v9"
 )
 
-func ConnectToRedis(ctx context.Context, config config.Config, logger loggerInterface) (*redis.Client, error) {
+func ConnectToRedis(ctx context.Context, config config.Config, logger logger.Logger) (*redis.Client, error) {
 	redisClient := redis.NewClient(&redis.Options{
 		Addr:     fmt.Sprintf("%s:%d", config.RedisHost, config.RedisPort),
 		Password: config.RedisPassword,

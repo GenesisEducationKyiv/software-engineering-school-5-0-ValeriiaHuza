@@ -46,7 +46,7 @@ func setupMailerTest(t *testing.T) (*mockEmailBuilder, *mockDialer, *MailService
 	builder := new(mockEmailBuilder)
 	dialer := new(mockDialer)
 	mockLog, _ := logger.NewLogger()
-	ms := NewMailerService("test@example.com", dialer, builder, mockLog)
+	ms := NewMailerService("test@example.com", dialer, builder, *mockLog)
 	return builder, dialer, ms
 }
 

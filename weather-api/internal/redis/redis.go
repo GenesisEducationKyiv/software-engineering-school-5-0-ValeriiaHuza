@@ -5,13 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/redis/go-redis/v9"
 )
-
-type loggerInterface interface {
-	Info(msg string, keysAndValues ...any)
-	Error(msg string, keysAndValues ...any)
-}
 
 type redisClient interface {
 	Set(ctx context.Context, key string, value interface{}, ttl time.Duration) *redis.StatusCmd
@@ -22,10 +18,10 @@ type redisClient interface {
 type RedisProvider struct {
 	rdb    redisClient
 	ctx    context.Context
-	logger loggerInterface
+	logger logger.Logger
 }
 
-func NewRedisProvider(redis redisClient, ctx context.Context, logger loggerInterface) RedisProvider {
+func NewRedisProvider(redis redisClient, ctx context.Context, logger logger.Logger) RedisProvider {
 	return RedisProvider{
 		rdb:    redis,
 		ctx:    ctx,
