@@ -12,6 +12,7 @@ import (
 	weatherapi "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client/weatherApi"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/db"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/httpclient"
+	metricP "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/metrics"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/rabbitmq"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/repository"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/routes"
@@ -19,6 +20,7 @@ import (
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/subscription"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/weather"
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	redisProvider "github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/redis"
 
@@ -29,11 +31,18 @@ import (
 func Run() error {
 	var ctx = context.Background()
 
-	err := logger.InitLoggerFile("app.log")
+	logger, err := logger.NewLogger()
 	if err != nil {
-		log.Fatalf("Failed to init logger: %v", err)
+		log.Fatalf("Failed to initialize zap logger: %v", err)
 	}
-	defer logger.CloseLogFile()
+
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			log.Printf("Error syncing logger: %v\n", err)
+		}
+	}()
+
+	logger.Info("Starting Weather Api Service...")
 
 	config, err := config.LoadEnvVariables()
 
@@ -41,7 +50,7 @@ func Run() error {
 		return err
 	}
 
-	db, err := db.ConnectToDatabase(*config)
+	db, err := db.ConnectToDatabase(*config, *logger)
 
 	if err != nil {
 		return err
@@ -49,17 +58,18 @@ func Run() error {
 
 	sqlDB, err := db.DB()
 	if err != nil {
-		log.Printf("Failed to get sql.DB from gorm.DB: %v", err)
+		logger.Error("Failed to get sql.DB from gorm.DB", "error", err)
 		return err
 	}
 
 	defer func() {
 		if err := sqlDB.Close(); err != nil {
-			log.Printf("Error closing database: %v", err)
+			logger.Error("Failed to close database connection", "error", err)
+
 		}
 	}()
 
-	redis, err := redisProvider.ConnectToRedis(ctx, *config)
+	redis, err := redisProvider.ConnectToRedis(ctx, *config, *logger)
 
 	if err != nil {
 		return err
@@ -67,11 +77,11 @@ func Run() error {
 
 	defer func() {
 		if err := redis.Close(); err != nil {
-			log.Printf("Error closing Redis: %v", err)
+			logger.Error("Failed to close Redis connection", "error", err)
 		}
 	}()
 
-	rabbit, err := rabbitmq.ConnectToRabbitMQ(config.RabbitMQUrl)
+	rabbit, err := rabbitmq.ConnectToRabbitMQ(config.RabbitMQUrl, *logger)
 	if err != nil {
 		return err
 	}
@@ -86,12 +96,12 @@ func Run() error {
 
 	router := setupRouter()
 
-	redisPrv := redisProvider.NewRedisProvider(redis, ctx)
+	redisPrv := redisProvider.NewRedisProvider(redis, ctx, *logger)
 
-	services := initServices(*config, db, redisPrv, emailPublisher)
+	services := initServices(*config, db, redisPrv, emailPublisher, *logger)
 
 	initRoutes(router, services)
-	startBackgroundJobs(*services.subscribeService)
+	startBackgroundJobs(*services.subscribeService, *logger)
 
 	return startServer(*config, router)
 }
@@ -99,10 +109,14 @@ func Run() error {
 func setupRouter() *gin.Engine {
 	router := gin.Default()
 
+	router.Use(metricP.MetricsMiddleware())
+
 	router.Static("/static", "./static")
 	router.GET("/", func(c *gin.Context) {
 		c.File("./static/index.html")
 	})
+
+	router.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	return router
 }
@@ -117,8 +131,8 @@ func initRoutes(router *gin.Engine, services *Services) {
 	routes.SubscribeRoute(api, subscribeController)
 }
 
-func startBackgroundJobs(subscribeService subscription.SubscribeService) {
-	schedulerService := scheduler.NewScheduler(&subscribeService)
+func startBackgroundJobs(subscribeService subscription.SubscribeService, logger logger.Logger) {
+	schedulerService := scheduler.NewScheduler(&subscribeService, logger)
 	schedulerService.StartCronJobs()
 }
 
@@ -129,15 +143,16 @@ func startServer(config config.Config, router *gin.Engine) error {
 }
 
 func initServices(config config.Config, database *gorm.DB,
-	redisPrv redisProvider.RedisProvider, emailPublisher *rabbitmq.RabbitMQPublisher) *Services {
+	redisPrv redisProvider.RedisProvider, emailPublisher *rabbitmq.RabbitMQPublisher,
+	logger logger.Logger) *Services {
 
-	weatherApiChain := buildWeatherResponsibilityChain(config)
+	weatherApiChain := buildWeatherResponsibilityChain(config, logger)
 
-	weatherService := weather.NewWeatherAPIService(weatherApiChain, &redisPrv)
+	weatherService := weather.NewWeatherAPIService(weatherApiChain, &redisPrv, logger)
 
 	subscribeRepo := repository.NewSubscriptionRepository(database)
 
-	subscribeService := subscription.NewSubscribeService(weatherService, subscribeRepo, emailPublisher)
+	subscribeService := subscription.NewSubscribeService(weatherService, subscribeRepo, emailPublisher, logger)
 
 	return &Services{
 		weatherService:   weatherService,
@@ -145,16 +160,18 @@ func initServices(config config.Config, database *gorm.DB,
 	}
 }
 
-func buildWeatherResponsibilityChain(config config.Config) *client.WeatherChain {
+func buildWeatherResponsibilityChain(config config.Config, logger logger.Logger) *client.WeatherChain {
 	http := httpclient.InitHttpClient()
 
-	geocoding := openweather.NewGeocodingClient(config.OpenWeatherKey, config.OpenWeatherUrl, &http)
+	geocoding := openweather.NewGeocodingClient(config.OpenWeatherKey, config.OpenWeatherUrl, &http, logger)
 
-	weatherApiClient := weatherapi.NewWeatherAPIClient(config.WeatherAPIKey, config.WeatherAPIUrl, &http)
-	openWeatherClient := openweather.NewWeatherAPIClient(config.OpenWeatherKey, config.OpenWeatherUrl, geocoding, &http)
+	weatherApiClient := weatherapi.NewWeatherAPIClient(config.WeatherAPIKey,
+		config.WeatherAPIUrl, &http, logger)
+	openWeatherClient := openweather.NewWeatherAPIClient(config.OpenWeatherKey,
+		config.OpenWeatherUrl, geocoding, &http, logger)
 
-	weatherApiChain := client.NewWeatherChain(weatherApiClient)
-	openWeatherChain := client.NewWeatherChain(openWeatherClient)
+	weatherApiChain := client.NewWeatherChain(weatherApiClient, logger)
+	openWeatherChain := client.NewWeatherChain(openWeatherClient, logger)
 
 	weatherApiChain.SetNext(openWeatherChain)
 

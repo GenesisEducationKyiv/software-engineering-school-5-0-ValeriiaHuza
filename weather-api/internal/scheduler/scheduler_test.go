@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/service/subscription"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
+
 	"github.com/stretchr/testify/mock"
 )
 
@@ -29,7 +31,9 @@ func TestStartCronJobs_SchedulesJobs(t *testing.T) {
 	mockService.On("SendSubscriptionEmails", subscription.FrequencyDaily).Return()
 	mockService.On("SendSubscriptionEmails", subscription.FrequencyHourly).Return()
 
-	scheduler := NewScheduler(mockService) // Assuming constructor exists
+	mockLog, _ := logger.NewTestLogger()
+
+	scheduler := NewScheduler(mockService, *mockLog) // Assuming constructor exists
 	scheduler.StartCronJobs()
 
 	mockService.SendSubscriptionEmails(subscription.FrequencyDaily)
