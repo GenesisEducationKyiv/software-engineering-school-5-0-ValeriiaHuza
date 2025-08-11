@@ -3,19 +3,21 @@ package emailBuilder
 import (
 	"fmt"
 	"html"
-	"log"
 	"time"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/internal/mailer"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/mailer-service/logger"
 )
 
 type WeatherEmailBuilder struct {
 	appUrl string
+	logger logger.Logger
 }
 
-func NewWeatherEmailBuilder(appUrl string) *WeatherEmailBuilder {
+func NewWeatherEmailBuilder(appUrl string, logger logger.Logger) *WeatherEmailBuilder {
 	return &WeatherEmailBuilder{
 		appUrl: appUrl,
+		logger: logger,
 	}
 }
 
@@ -50,7 +52,7 @@ func (w *WeatherEmailBuilder) BuildWeatherUpdateEmail(
 func (w *WeatherEmailBuilder) BuildConfirmationEmail(sub mailer.SubscriptionDTO) string {
 	confirmationLink := w.buildURL("/api/confirm/") + sub.Token
 
-	log.Println(confirmationLink)
+	w.logger.Info("Building confirmation email", "confirmationLink", confirmationLink)
 
 	escapedCity := html.EscapeString(sub.City)
 
@@ -73,6 +75,6 @@ func (w *WeatherEmailBuilder) BuildConfirmSuccessEmail(sub mailer.SubscriptionDT
 }
 
 func (w *WeatherEmailBuilder) buildURL(path string) string {
-	log.Println("Building URL with appUrl:", w.appUrl, "and path:", path)
+	w.logger.Info("Building URL", "appUrl", w.appUrl, "path", path)
 	return w.appUrl + path
 }

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/internal/client"
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,8 +43,9 @@ func TestGetCityCoordinates_Success(t *testing.T) {
 	apiUrl := "open-weather"
 	mockBody := `[{"lat":50.45,"lon":30.52}]`
 	mockClient := newMockClient(mockBody, 200, nil)
+	mockLog, _ := logger.NewTestLogger()
 
-	client := NewGeocodingClient(apiKey, apiUrl, mockClient)
+	client := NewGeocodingClient(apiKey, apiUrl, mockClient, *mockLog)
 
 	coords, err := client.GetCityCoordinates("Kyiv")
 	assert.NoError(t, err)
@@ -56,8 +58,9 @@ func TestGetCityCoordinates_NoCityFound(t *testing.T) {
 	apiKey := "key"
 	apiUrl := "open-weather"
 	mockClient := newMockClient("[]", 200, nil)
+	mockLog, _ := logger.NewTestLogger()
 
-	geoClient := NewGeocodingClient(apiKey, apiUrl, mockClient)
+	geoClient := NewGeocodingClient(apiKey, apiUrl, mockClient, *mockLog)
 
 	coords, err := geoClient.GetCityCoordinates("Kyiv")
 	assert.Error(t, err)
@@ -69,8 +72,9 @@ func TestGetCityCoordinates_Non200Status(t *testing.T) {
 	apiKey := "key"
 	apiUrl := "open-weather"
 	mockClient := newMockClient("not found", 404, nil)
+	mockLog, _ := logger.NewTestLogger()
 
-	client := NewGeocodingClient(apiKey, apiUrl, mockClient)
+	client := NewGeocodingClient(apiKey, apiUrl, mockClient, *mockLog)
 
 	coords, err := client.GetCityCoordinates("Kyiv")
 	assert.Error(t, err)
@@ -82,7 +86,8 @@ func TestGetCityCoordinates_InvalidJSON(t *testing.T) {
 	apiUrl := "open-weather"
 	mockClient := newMockClient("{invalid json", 200, nil)
 
-	client := NewGeocodingClient(apiKey, apiUrl, mockClient)
+	mockLog, _ := logger.NewTestLogger()
+	client := NewGeocodingClient(apiKey, apiUrl, mockClient, *mockLog)
 
 	coords, err := client.GetCityCoordinates("Kyiv")
 	assert.Error(t, err)

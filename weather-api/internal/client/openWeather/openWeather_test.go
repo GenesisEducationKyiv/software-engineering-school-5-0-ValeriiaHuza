@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/GenesisEducationKyiv/software-engineering-school-5-0-ValeriiaHuza/weather-api/logger"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -31,7 +32,8 @@ func TestFetchWeather_Success(t *testing.T) {
     }`
 	geo := &mockGeocodingClient{coord: &Coordinates{Lat: 50.0, Lon: 30.0}}
 	client := newMockClient(weatherJSON, 200, nil)
-	api := NewWeatherAPIClient("testkey", "http://api", geo, client)
+	mockLog, _ := logger.NewTestLogger()
+	api := NewWeatherAPIClient("testkey", "http://api", geo, client, *mockLog)
 
 	weather, err := api.FetchWeather("Kyiv")
 
@@ -44,7 +46,8 @@ func TestFetchWeather_Success(t *testing.T) {
 
 func TestFetchWeather_GeocodingError(t *testing.T) {
 	geo := &mockGeocodingClient{err: errors.New("geo error")}
-	api := NewWeatherAPIClient("testkey", "http://api", geo, http.DefaultClient)
+	mockLog, _ := logger.NewTestLogger()
+	api := NewWeatherAPIClient("testkey", "http://api", geo, http.DefaultClient, *mockLog)
 
 	weather, err := api.FetchWeather("Kyiv")
 
@@ -55,7 +58,8 @@ func TestFetchWeather_GeocodingError(t *testing.T) {
 func TestFetchWeather_Non200Status(t *testing.T) {
 	geo := &mockGeocodingClient{coord: &Coordinates{Lat: 50.0, Lon: 30.0}}
 	client := newMockClient("could not get weather", 404, nil)
-	api := NewWeatherAPIClient("testkey", "http://api", geo, client)
+	mockLog, _ := logger.NewTestLogger()
+	api := NewWeatherAPIClient("testkey", "http://api", geo, client, *mockLog)
 
 	result, err := api.FetchWeather("Kyiv")
 	assert.Error(t, err)
@@ -66,7 +70,8 @@ func TestFetchWeather_Non200Status(t *testing.T) {
 func TestFetchWeather_BadJSON(t *testing.T) {
 	geo := &mockGeocodingClient{coord: &Coordinates{Lat: 50.0, Lon: 30.0}}
 	client := newMockClient("{bad json", 200, nil)
-	api := NewWeatherAPIClient("testkey", "http://api", geo, client)
+	mockLog, _ := logger.NewTestLogger()
+	api := NewWeatherAPIClient("testkey", "http://api", geo, client, *mockLog)
 
 	result, err := api.FetchWeather("Kyiv")
 	assert.Error(t, err)
@@ -81,7 +86,8 @@ func TestFetchWeather_EmptyWeatherArray(t *testing.T) {
 	client := newMockClient(weatherJSON, 200, nil)
 	geo := &mockGeocodingClient{coord: &Coordinates{Lat: 50.0, Lon: 30.0}}
 
-	api := NewWeatherAPIClient("testkey", "http://api", geo, client)
+	mockLog, _ := logger.NewTestLogger()
+	api := NewWeatherAPIClient("testkey", "http://api", geo, client, *mockLog)
 
 	result, err := api.FetchWeather("Kyiv")
 
