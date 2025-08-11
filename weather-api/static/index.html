@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Weather Subscription</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f3e8ff; /* light lilac */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #6a1b9a;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+    }
+
+    input, select, button {
+      margin-bottom: 15px;
+      padding: 10px;
+      font-size: 1em;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+    }
+
+    button {
+      background-color: #ab47bc;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s ease-in-out;
+    }
+
+    button:hover {
+      background-color: #9c27b0;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      background: #f1f1f1;
+      border-radius: 8px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h2>Subscribe for Weather Updates</h2>
+    <form id="subscribe-form">
+      <input type="email" name="email" placeholder="Your email" required />
+      <input type="text" name="city" placeholder="City" required />
+      <select name="frequency" required>
+        <option value="">Select Frequency</option>
+        <option value="daily">Daily</option>
+        <option value="hourly">Hourly</option>
+      </select>
+      <button type="submit">Subscribe</button>
+    </form>
+
+    <h2>Check Current Weather</h2>
+    <form id="weather-form">
+      <input type="text" name="city" placeholder="Enter city" required />
+      <button type="submit">Get Weather</button>
+    </form>
+
+    <div class="result" id="weather-result"></div>
+  </div>
+
+  <script>
+    document.getElementById("subscribe-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const formData = new FormData(this);
+      const data = {
+        email: formData.get("email"),
+        city: formData.get("city"),
+        frequency: formData.get("frequency")
+      };
+
+      fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      })
+      .then(res => res.text())
+      .then(msg => alert(msg))
+      .catch(err => alert("Subscription failed: " + err));
+    });
+
+    document.getElementById("weather-form").addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      const city = new FormData(this).get("city");
+
+      fetch(`/api/weather?city=${encodeURIComponent(city)}`)
+        .then(res => {
+          if (!res.ok) throw new Error("City not found");
+          return res.json();
+        })
+        .then(data => {
+          const resultDiv = document.getElementById("weather-result");
+          resultDiv.innerHTML = `
+            <strong>City:</strong> ${city}<br />
+            <strong>Temperature:</strong> ${data.temperature}°C<br />
+            <strong>Humidity:</strong> ${data.humidity}%<br />
+            <strong>Description:</strong> ${data.description}
+          `;
+          resultDiv.style.display = "block";
+        })
+        .catch(err => {
+          const resultDiv = document.getElementById("weather-result");
+          resultDiv.innerHTML = "Error: " + err.message;
+          resultDiv.style.display = "block";
+        });
+    });
+  </script>
+
+</body>
+</html>
